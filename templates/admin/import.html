@@ -35,59 +35,75 @@
         </div>
     </div>
 
-    <!-- Excel Product Import -->
+    <!-- Spreadsheet Product Import -->
     <div class="col-lg-6">
         <div class="card h-100">
             <div class="card-header bg-white">
-                <h5 class="mb-0 fw-bold"><i class="bi bi-file-earmark-excel text-success me-2"></i>Import Products from Excel</h5>
+                <h5 class="mb-0 fw-bold"><i class="bi bi-file-earmark-spreadsheet text-success me-2"></i>Import Products from Spreadsheet</h5>
             </div>
             <div class="card-body">
-                <p class="text-muted">Upload an Excel (.xlsx) file with your product catalog. Columns are automatically mapped to product fields.</p>
+                <p class="text-muted">Upload an <strong>XLSX</strong>, <strong>CSV</strong>, or <strong>ODS</strong> file. The system auto-detects the column format.</p>
                 <div class="bg-light rounded p-3 mb-3">
-                    <h6 class="fw-bold mb-2">Expected columns (flexible matching):</h6>
+                    <h6 class="fw-bold mb-2">Supported formats:</h6>
                     <div class="row small">
                         <div class="col-6">
                             <ul class="mb-0">
-                                <li><strong>Name</strong> — product name</li>
-                                <li><strong>Category</strong> — glass type</li>
-                                <li><strong>Make</strong> — car manufacturer</li>
-                                <li><strong>Model</strong> — car model</li>
-                                <li><strong>Year Start / End</strong></li>
+                                <li><strong>BENSON LIST</strong> style:<br>Part Number, Product, Color, Vehicle</li>
+                                <li class="mt-1"><strong>Invoice / Inventory</strong> style:<br>Item, Description, Price, Quantity</li>
                             </ul>
                         </div>
                         <div class="col-6">
                             <ul class="mb-0">
-                                <li><strong>Part Number</strong> / SKU</li>
-                                <li><strong>Price</strong> — selling price</li>
-                                <li><strong>Cost</strong> — wholesale cost</li>
-                                <li><strong>Stock</strong> — quantity</li>
-                                <li><strong>Description</strong></li>
+                                <li><strong>Generic</strong> columns:<br>Name, Category, Make, Model, Year, Part #, Price, Cost, Stock</li>
+                                <li class="mt-1"><strong>File types:</strong><br>.xlsx, .csv, .ods</li>
                             </ul>
                         </div>
                     </div>
                 </div>
                 <form method="post" action="{{ url_for('admin.import_data') }}" enctype="multipart/form-data">
-                    <input type="hidden" name="import_type" value="excel_products">
+                    <input type="hidden" name="import_type" value="spreadsheet_products">
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Select Excel File</label>
-                        <input type="file" name="file" class="form-control" accept=".xlsx,.xls" required>
+                        <label class="form-label fw-semibold">Select File (.xlsx, .csv, .ods)</label>
+                        <input type="file" name="file" class="form-control" accept=".xlsx,.xls,.csv,.ods" required>
                     </div>
-                    <button type="submit" class="btn btn-success"><i class="bi bi-upload me-1"></i>Import Excel Products</button>
+                    <button type="submit" class="btn btn-success"><i class="bi bi-upload me-1"></i>Import Products</button>
                 </form>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Template Download -->
+<!-- Export Data -->
 <div class="card mt-4">
     <div class="card-body">
         <h5 class="fw-bold mb-3"><i class="bi bi-download me-2"></i>Export Current Data</h5>
-        <p class="text-muted">Download your current data as Excel spreadsheets.</p>
-        <div class="d-flex gap-2 flex-wrap">
-            <a href="{{ url_for('admin.export_products') }}" class="btn btn-outline-success"><i class="bi bi-file-earmark-excel me-1"></i>Export Products</a>
-            <a href="{{ url_for('admin.export_orders') }}" class="btn btn-outline-primary"><i class="bi bi-file-earmark-excel me-1"></i>Export Orders</a>
-            <a href="{{ url_for('admin.export_invoices') }}" class="btn btn-outline-secondary"><i class="bi bi-file-earmark-excel me-1"></i>Export Invoices</a>
+        <p class="text-muted">Download your data in XLSX, CSV, or ODS format.</p>
+
+        <div class="row g-3">
+            <div class="col-md-4">
+                <h6 class="fw-bold mb-2">Products</h6>
+                <div class="btn-group w-100">
+                    <a href="{{ url_for('admin.export_products_route', fmt='xlsx') }}" class="btn btn-outline-success btn-sm"><i class="bi bi-file-earmark-excel me-1"></i>XLSX</a>
+                    <a href="{{ url_for('admin.export_products_route', fmt='csv') }}" class="btn btn-outline-success btn-sm"><i class="bi bi-filetype-csv me-1"></i>CSV</a>
+                    <a href="{{ url_for('admin.export_products_route', fmt='ods') }}" class="btn btn-outline-success btn-sm"><i class="bi bi-file-earmark me-1"></i>ODS</a>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <h6 class="fw-bold mb-2">Orders</h6>
+                <div class="btn-group w-100">
+                    <a href="{{ url_for('admin.export_orders_route', fmt='xlsx') }}" class="btn btn-outline-primary btn-sm"><i class="bi bi-file-earmark-excel me-1"></i>XLSX</a>
+                    <a href="{{ url_for('admin.export_orders_route', fmt='csv') }}" class="btn btn-outline-primary btn-sm"><i class="bi bi-filetype-csv me-1"></i>CSV</a>
+                    <a href="{{ url_for('admin.export_orders_route', fmt='ods') }}" class="btn btn-outline-primary btn-sm"><i class="bi bi-file-earmark me-1"></i>ODS</a>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <h6 class="fw-bold mb-2">Invoices</h6>
+                <div class="btn-group w-100">
+                    <a href="{{ url_for('admin.export_invoices_route', fmt='xlsx') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-file-earmark-excel me-1"></i>XLSX</a>
+                    <a href="{{ url_for('admin.export_invoices_route', fmt='csv') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-filetype-csv me-1"></i>CSV</a>
+                    <a href="{{ url_for('admin.export_invoices_route', fmt='ods') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-file-earmark me-1"></i>ODS</a>
+                </div>
+            </div>
         </div>
     </div>
 </div>

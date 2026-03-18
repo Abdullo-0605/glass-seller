@@ -1,5 +1,7 @@
 """All Flask routes for the Glass Seller application."""
 import os
+import json
+import uuid
 from datetime import datetime, timezone
 from flask import (
     Blueprint, render_template, request, redirect, url_for,
@@ -11,30 +13,168 @@ from .models import db, Product, WholesaleShipment, ShipmentItem, Order, OrderIt
 from .auth import login_required, admin_required
 from .analytics import answer_question
 from .import_utils import (
-    parse_pdf_invoice, parse_excel_products,
-    export_products_to_excel, export_invoices_to_excel, export_orders_to_excel,
+    parse_pdf_invoice, parse_products_file,
+    export_products, export_orders, export_invoices,
 )
 
 main = Blueprint("main", __name__)
 admin = Blueprint("admin", __name__, url_prefix="/admin")
 
 ALLOWED_PDF = {"pdf"}
-ALLOWED_EXCEL = {"xlsx", "xls"}
+ALLOWED_SPREADSHEET = {"xlsx", "xls", "csv", "ods"}
 
 
 def _allowed(filename, extensions):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in extensions
 
 
+def _get_ext(filename):
+    return filename.rsplit(".", 1)[1].lower() if "." in filename else ""
+
+
+# ---------------------------------------------------------------------------
+# AUTO GLASS FINDER (Step-by-step wizard)
+# ---------------------------------------------------------------------------
+
+@main.route("/finder")
+def finder():
+    cart = session.get("cart", {})
+    cart_count = sum(cart.values())
+    return render_template("finder.html", step="year", cart_count=cart_count)
+
+
+MIN_VALID_YEAR = 1950
+MAX_VALID_YEAR = 2026
+
+
+@main.route("/finder/api/years")
+def finder_years():
+    products = Product.query.filter(
+        Product.car_year_start.isnot(None),
+        Product.car_year_start >= MIN_VALID_YEAR,
+        Product.car_year_end <= MAX_VALID_YEAR,
+        Product.car_make != "",
+    ).all()
+    years_set = set()
+    for p in products:
+        if p.car_year_start and p.car_year_end:
+            s = max(p.car_year_start, MIN_VALID_YEAR)
+            e = min(p.car_year_end, MAX_VALID_YEAR)
+            for y in range(s, e + 1):
+                years_set.add(y)
+    years = sorted(years_set, reverse=True)
+    return jsonify(years)
+
+
+@main.route("/finder/api/makes")
+def finder_makes():
+    year = request.args.get("year", type=int)
+    query = Product.query.filter(
+        Product.car_make != "",
+        Product.car_year_start >= MIN_VALID_YEAR,
+        Product.car_year_end <= MAX_VALID_YEAR,
+    )
+    if year and MIN_VALID_YEAR <= year <= MAX_VALID_YEAR:
+        query = query.filter(
+            Product.car_year_start <= year,
+            Product.car_year_end >= year,
+        )
+    makes = sorted(set(r.car_make for r in query.all() if r.car_make))
+    return jsonify(makes)
+
+
+@main.route("/finder/api/models")
+def finder_models():
+    year = request.args.get("year", type=int)
+    make = request.args.get("make", "")
+    query = Product.query.filter(
+        Product.car_make == make,
+        Product.car_model != "",
+        Product.car_year_start >= MIN_VALID_YEAR,
+        Product.car_year_end <= MAX_VALID_YEAR,
+    )
+    if year and MIN_VALID_YEAR <= year <= MAX_VALID_YEAR:
+        query = query.filter(
+            Product.car_year_start <= year,
+            Product.car_year_end >= year,
+        )
+    models = sorted(set(r.car_model for r in query.all() if r.car_model))
+    return jsonify(models)
+
+
+@main.route("/finder/results")
+def finder_results():
+    year = request.args.get("year", type=int)
+    make = request.args.get("make", "")
+    model = request.args.get("model", "")
+
+    # Primary: products with proper make/model/year fields
+    query = Product.query
+    if year:
+        query = query.filter(Product.car_year_start <= year, Product.car_year_end >= year)
+    if make:
+        query = query.filter(Product.car_make == make)
+    if model:
+        query = query.filter(Product.car_model == model)
+    results = query.all()
+
+    # Also find imported products that mention this make+model in their name
+    # (catches orphan imports that didn't get proper make/model fields)
+    if make and model:
+        name_matches = Product.query.filter(
+            Product.name.ilike(f"%{make}%"),
+            Product.name.ilike(f"%{model}%"),
+            Product.price > 0,
+        ).all()
+        existing_ids = {p.id for p in results}
+        for p in name_matches:
+            if p.id not in existing_ids:
+                results.append(p)
+
+    # Sort: in-stock first, then by price (highest first), then name
+    results.sort(key=lambda p: (0 if p.stock_quantity > 0 else 1, -p.price, p.name))
+
+    cart = session.get("cart", {})
+    cart_count = sum(cart.values())
+    return render_template(
+        "finder_results.html",
+        products=results, year=year, make=make, model=model, cart_count=cart_count,
+    )
+
+
+# ---------------------------------------------------------------------------
+# HOMEPAGE & CONTACT
+# ---------------------------------------------------------------------------
+
+@main.route("/")
+def home():
+    cart = session.get("cart", {})
+    cart_count = sum(cart.values())
+    product_count = Product.query.count()
+    make_count = db.session.query(Product.car_make).filter(Product.car_make != "").distinct().count()
+    in_stock = Product.query.filter(Product.stock_quantity > 0).count()
+    return render_template("home.html", cart_count=cart_count,
+                           product_count=product_count, make_count=make_count, in_stock=in_stock)
+
+
+@main.route("/contact")
+def contact():
+    cart = session.get("cart", {})
+    cart_count = sum(cart.values())
+    return render_template("contact.html", cart_count=cart_count)
+
+
 # ---------------------------------------------------------------------------
 # CATALOG / STOREFRONT
 # ---------------------------------------------------------------------------
 
-@main.route("/")
+@main.route("/catalog")
 def index():
     category = request.args.get("category", "")
     search = request.args.get("search", "")
     sort = request.args.get("sort", "name")
+    page = request.args.get("page", 1, type=int)
+    per_page = 24
 
     query = Product.query
     if category:
@@ -47,20 +187,22 @@ def index():
                 Product.part_number.ilike(term),
                 Product.car_make.ilike(term),
                 Product.car_model.ilike(term),
-                Product.description.ilike(term),
             )
         )
 
-    if sort == "price_asc":
-        query = query.order_by(Product.price.asc())
-    elif sort == "price_desc":
-        query = query.order_by(Product.price.desc())
-    elif sort == "newest":
-        query = query.order_by(Product.created_at.desc())
-    else:
-        query = query.order_by(Product.name.asc())
+    # Always show in-stock first, then apply sort within each group
+    in_stock_first = db.case((Product.stock_quantity > 0, 0), else_=1)
 
-    products = query.all()
+    if sort == "price_asc":
+        query = query.order_by(in_stock_first, Product.price.asc())
+    elif sort == "price_desc":
+        query = query.order_by(in_stock_first, Product.price.desc())
+    elif sort == "newest":
+        query = query.order_by(in_stock_first, Product.created_at.desc())
+    else:
+        query = query.order_by(in_stock_first, Product.name.asc())
+
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     categories = [r[0] for r in db.session.query(Product.category).distinct().order_by(Product.category).all()]
 
     cart = session.get("cart", {})
@@ -68,7 +210,8 @@ def index():
 
     return render_template(
         "catalog.html",
-        products=products,
+        products=pagination.items,
+        pagination=pagination,
         categories=categories,
         current_category=category,
         search=search,
@@ -315,6 +458,24 @@ def edit_product(product_id):
     return render_template("admin/product_form.html", product=product)
 
 
+@admin.route("/products/<int:product_id>/quick-update", methods=["POST"])
+@admin_required
+def quick_update_product(product_id):
+    product = db.get_or_404(Product, product_id)
+    new_price = request.form.get("price")
+    new_cost = request.form.get("cost")
+    new_qty = request.form.get("stock_quantity")
+    if new_price is not None and new_price.strip():
+        product.price = float(new_price)
+    if new_cost is not None and new_cost.strip():
+        product.cost = float(new_cost)
+    if new_qty is not None and new_qty.strip():
+        product.stock_quantity = int(new_qty)
+    db.session.commit()
+    flash(f"Updated {product.name}.", "success")
+    return redirect(request.referrer or url_for("admin.products"))
+
+
 @admin.route("/products/<int:product_id>/delete", methods=["POST"])
 @admin_required
 def delete_product(product_id):
@@ -351,20 +512,36 @@ def order_detail(order_id):
 @admin_required
 def update_order_status(order_id):
     order = db.get_or_404(Order, order_id)
+    old_status = order.status
     new_status = request.form.get("status", order.status)
+
+    # If cancelling a non-cancelled order, restore stock
+    if new_status == "CANCELLED" and old_status != "CANCELLED":
+        for item in order.items:
+            if item.product:
+                item.product.stock_quantity += item.quantity
+        flash(f"Order #{order.id} cancelled — stock restored.", "warning")
+    # If un-cancelling (reactivating a cancelled order), deduct stock again
+    elif old_status == "CANCELLED" and new_status != "CANCELLED":
+        for item in order.items:
+            if item.product:
+                item.product.stock_quantity = max(0, item.product.stock_quantity - item.quantity)
+        flash(f"Order #{order.id} reactivated — stock deducted.", "info")
+    else:
+        flash(f"Order #{order.id} status updated to {new_status}.", "success")
+
     order.status = new_status
     db.session.commit()
-    flash(f"Order #{order.id} status updated to {new_status}.", "success")
     return redirect(url_for("admin.order_detail", order_id=order.id))
 
 
 @admin.route("/orders/export")
 @admin_required
-def export_orders():
-    orders = Order.query.order_by(Order.created_at.desc()).all()
-    buf = export_orders_to_excel(orders)
-    return send_file(buf, download_name="orders.xlsx", as_attachment=True,
-                     mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+def export_orders_route():
+    fmt = request.args.get("fmt", "xlsx")
+    all_orders = Order.query.order_by(Order.created_at.desc()).all()
+    buf, filename, mimetype = export_orders(all_orders, fmt)
+    return send_file(buf, download_name=filename, as_attachment=True, mimetype=mimetype)
 
 
 # ---------------------------------------------------------------------------
@@ -435,11 +612,11 @@ def invoice_detail(invoice_id):
 
 @admin.route("/invoices/export")
 @admin_required
-def export_invoices():
+def export_invoices_route():
+    fmt = request.args.get("fmt", "xlsx")
     invs = Invoice.query.order_by(Invoice.created_at.desc()).all()
-    buf = export_invoices_to_excel(invs)
-    return send_file(buf, download_name="invoices.xlsx", as_attachment=True,
-                     mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    buf, filename, mimetype = export_invoices(invs, fmt)
+    return send_file(buf, download_name=filename, as_attachment=True, mimetype=mimetype)
 
 
 @admin.route("/import", methods=["GET", "POST"])
@@ -450,21 +627,37 @@ def import_data():
 
         if import_type == "pdf_invoice":
             return _handle_pdf_import()
-        elif import_type == "excel_products":
-            return _handle_excel_import()
+        elif import_type == "spreadsheet_products":
+            return _handle_spreadsheet_import()
         else:
             flash("Unknown import type.", "danger")
 
     return render_template("admin/import.html")
 
 
+@admin.route("/clear-database", methods=["POST"])
+@admin_required
+def clear_database():
+    confirm = request.form.get("confirm", "")
+    if confirm != "RESET STOCK":
+        flash("You must type 'RESET STOCK' to confirm.", "danger")
+        return redirect(url_for("admin.dashboard"))
+
+    # Reset all stock to 0 and prices to 0 — keeps products, orders, and finder intact
+    Product.query.update({Product.stock_quantity: 0, Product.price: 0.0, Product.cost: 0.0})
+    db.session.commit()
+    count = Product.query.count()
+    flash(f"Stock reset. All {count} products set to 0 stock and $0 price. Orders and products preserved.", "warning")
+    return redirect(url_for("admin.dashboard"))
+
+
 @admin.route("/products/export")
 @admin_required
-def export_products():
+def export_products_route():
+    fmt = request.args.get("fmt", "xlsx")
     products = Product.query.order_by(Product.name).all()
-    buf = export_products_to_excel(products)
-    return send_file(buf, download_name="products.xlsx", as_attachment=True,
-                     mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    buf, filename, mimetype = export_products(products, fmt)
+    return send_file(buf, download_name=filename, as_attachment=True, mimetype=mimetype)
 
 
 def _handle_pdf_import():
@@ -539,39 +732,180 @@ def _handle_pdf_import():
     return redirect(url_for("admin.import_data"))
 
 
-def _handle_excel_import():
+def _find_existing_product(pdata):
+    """Find an existing product matching the import data."""
+    pn = (pdata.get("part_number") or "").strip()
+    make = (pdata.get("car_make") or "").strip()
+    model = (pdata.get("car_model") or "").strip()
+    name = (pdata.get("name") or "").strip()
+
+    if pn:
+        existing = Product.query.filter_by(part_number=pn).first()
+        if existing:
+            return existing
+
+    if make and model:
+        q = Product.query.filter(
+            db.func.lower(Product.car_make) == make.lower(),
+            db.func.lower(Product.car_model) == model.lower(),
+        )
+        if pdata.get("car_year_start"):
+            q = q.filter(Product.car_year_start <= pdata["car_year_start"],
+                         Product.car_year_end >= pdata["car_year_start"])
+        existing = q.first()
+        if existing:
+            return existing
+
+    if name:
+        existing = Product.query.filter(db.func.lower(Product.name) == name.lower()).first()
+        if existing:
+            return existing
+
+    return None
+
+
+def _handle_spreadsheet_import():
+    """Step 1: Parse file and show review page for admin to edit prices."""
     file = request.files.get("file")
-    if not file or not _allowed(file.filename, ALLOWED_EXCEL):
-        flash("Please upload a valid Excel (.xlsx) file.", "danger")
+    if not file or not _allowed(file.filename, ALLOWED_SPREADSHEET):
+        flash("Please upload a valid file (.xlsx, .csv, or .ods).", "danger")
         return redirect(url_for("admin.import_data"))
 
     try:
-        products = parse_excel_products(file)
-        created = 0
-        updated = 0
+        filename = secure_filename(file.filename)
+        parsed = parse_products_file(file, filename)
 
-        for pdata in products:
-            existing = None
-            if pdata.get("part_number"):
-                existing = Product.query.filter_by(part_number=pdata["part_number"]).first()
+        review_items = []
+        for i, pdata in enumerate(parsed):
+            existing = _find_existing_product(pdata)
 
-            if existing:
-                for key, val in pdata.items():
-                    if val and val != "" and val != 0:
-                        setattr(existing, key, val)
-                updated += 1
-            else:
-                p = Product(**pdata)
-                db.session.add(p)
-                created += 1
+            file_qty = pdata.get("stock_quantity") or 0
+            file_cost = pdata.get("cost") or 0.0
+            file_price = pdata.get("price") or 0.0
+            if isinstance(file_qty, str):
+                file_qty = int(float(file_qty)) if file_qty.strip() else 0
+            if isinstance(file_cost, str):
+                file_cost = float(file_cost) if file_cost.strip() else 0.0
+            if isinstance(file_price, str):
+                file_price = float(file_price) if file_price.strip() else 0.0
 
-        db.session.commit()
-        flash(f"Excel imported: {created} products created, {updated} updated.", "success")
+            review_items.append({
+                "idx": i,
+                "name": pdata.get("name", ""),
+                "part_number": pdata.get("part_number", ""),
+                "car_make": pdata.get("car_make", ""),
+                "car_model": pdata.get("car_model", ""),
+                "car_year_start": pdata.get("car_year_start"),
+                "car_year_end": pdata.get("car_year_end"),
+                "category": pdata.get("category", "Auto Glass"),
+                "file_qty": file_qty,
+                "file_cost": file_cost,
+                "file_price": file_price,
+                "matched": existing is not None,
+                "matched_id": existing.id if existing else None,
+                "matched_name": existing.name if existing else None,
+                "current_qty": existing.stock_quantity if existing else 0,
+                "current_price": existing.price if existing else 0.0,
+                "current_cost": existing.cost if existing else 0.0,
+            })
+
+        # Save to temp file (session cookies are too small for this data)
+        review_id = str(uuid.uuid4())
+        tmp_dir = os.path.join(current_app.instance_path, "tmp")
+        os.makedirs(tmp_dir, exist_ok=True)
+        tmp_path = os.path.join(tmp_dir, f"review_{review_id}.json")
+        with open(tmp_path, "w") as f:
+            json.dump(review_items[:500], f)
+        session["import_review_id"] = review_id
+
+        matched = sum(1 for r in review_items if r["matched"])
+        new = sum(1 for r in review_items if not r["matched"])
+
+        return render_template(
+            "admin/import_review.html",
+            items=review_items[:500],
+            total_rows=len(parsed),
+            matched_count=matched,
+            new_count=new,
+            review_id=review_id,
+        )
     except Exception as e:
-        db.session.rollback()
-        flash(f"Error importing Excel: {str(e)}", "danger")
+        flash(f"Error parsing file: {str(e)}", "danger")
+        return redirect(url_for("admin.import_data"))
 
-    return redirect(url_for("admin.import_data"))
+
+@admin.route("/import/confirm", methods=["POST"])
+@admin_required
+def import_confirm():
+    """Step 2: Apply reviewed import data with admin-edited prices."""
+    review_id = session.pop("import_review_id", "")
+    if not review_id:
+        flash("No import data to confirm. Please upload a file first.", "warning")
+        return redirect(url_for("admin.import_data"))
+
+    tmp_path = os.path.join(current_app.instance_path, "tmp", f"review_{review_id}.json")
+    if not os.path.exists(tmp_path):
+        flash("Import data expired. Please upload the file again.", "warning")
+        return redirect(url_for("admin.import_data"))
+
+    with open(tmp_path, "r") as f:
+        review_items = json.load(f)
+    os.remove(tmp_path)
+
+    if not review_items:
+        flash("No import data to confirm.", "warning")
+        return redirect(url_for("admin.import_data"))
+
+    created = 0
+    updated = 0
+
+    for item in review_items:
+        idx = item["idx"]
+        # Get admin-edited values from the form
+        final_price = float(request.form.get(f"price_{idx}", item["file_price"]) or 0)
+        final_cost = float(request.form.get(f"cost_{idx}", item["file_cost"]) or 0)
+        final_qty = int(request.form.get(f"qty_{idx}", item["file_qty"]) or 0)
+        skip = request.form.get(f"skip_{idx}")
+
+        if skip:
+            continue
+
+        if item["matched"] and item["matched_id"]:
+            existing = db.session.get(Product, item["matched_id"])
+            if existing:
+                if final_qty > 0:
+                    existing.stock_quantity += final_qty
+                if final_cost > 0:
+                    existing.cost = final_cost
+                if final_price > 0:
+                    existing.price = final_price
+                if not existing.part_number and item.get("part_number"):
+                    existing.part_number = item["part_number"]
+                if not existing.car_make and item.get("car_make"):
+                    existing.car_make = item["car_make"]
+                if not existing.car_model and item.get("car_model"):
+                    existing.car_model = item["car_model"]
+                updated += 1
+        else:
+            p = Product(
+                name=item["name"],
+                part_number=item.get("part_number", ""),
+                car_make=item.get("car_make", ""),
+                car_model=item.get("car_model", ""),
+                car_year_start=item.get("car_year_start"),
+                car_year_end=item.get("car_year_end"),
+                category=item.get("category", "Auto Glass"),
+                price=final_price,
+                cost=final_cost,
+                stock_quantity=final_qty,
+                description=item.get("name", ""),
+            )
+            db.session.add(p)
+            created += 1
+
+    db.session.commit()
+    flash(f"Import confirmed: {created} new products added, {updated} existing products updated.", "success")
+    return redirect(url_for("admin.products"))
 
 
 # ---------------------------------------------------------------------------

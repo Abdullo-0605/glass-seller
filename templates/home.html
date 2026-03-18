@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+{% block title %}Winaris Glass LLC - Auto Glass Parts | Calgary, AB{% endblock %}
+
+{% block extra_css %}
+<style>
+    .home-hero {
+        background: linear-gradient(rgba(15,23,42,.75), rgba(15,23,42,.85)),
+                    url('https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=1600&q=80') center/cover no-repeat;
+        color: white; min-height: 600px;
+        display: flex; align-items: center;
+    }
+    .hero-title { font-size: 3.5rem; font-weight: 800; letter-spacing: -1.5px; line-height: 1.08; text-shadow: 0 2px 20px rgba(0,0,0,.3); }
+    .hero-sub { font-size: 1.25rem; opacity: .85; max-width: 560px; }
+    .hero-badge { background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.2); backdrop-filter: blur(8px); }
+    .stats-section { background: var(--ag-dark); color: white; }
+    .stat-num { font-size: 2.5rem; font-weight: 800; }
+    .img-card { border-radius: 1rem; overflow: hidden; position: relative; }
+    .img-card img { width: 100%; height: 100%; object-fit: cover; transition: transform .4s; }
+    .img-card:hover img { transform: scale(1.05); }
+    .img-card .img-overlay { position: absolute; inset: 0; background: linear-gradient(transparent 40%, rgba(0,0,0,.7)); display: flex; align-items: flex-end; padding: 1.5rem; }
+    .img-card .img-overlay h5 { color: white; margin: 0; font-weight: 700; }
+    .img-card .img-overlay small { color: rgba(255,255,255,.7); }
+    .cta-card { border: 2px solid transparent; transition: all .2s; cursor: pointer; text-decoration: none; color: inherit; }
+    .cta-card:hover { border-color: var(--ag-primary); transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,.12); }
+    .feature-icon { width: 60px; height: 60px; border-radius: 1rem; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
+    .photo-banner { height: 350px; overflow: hidden; position: relative; }
+    .photo-banner img { width: 100%; height: 100%; object-fit: cover; }
+    .photo-banner .overlay { position: absolute; inset: 0; background: linear-gradient(135deg, rgba(26,86,219,.85), rgba(14,165,233,.7)); display: flex; align-items: center; justify-content: center; color: white; text-align: center; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- HERO with real car image -->
+<section class="home-hero">
+    <div class="container py-5">
+        <div class="row align-items-center">
+            <div class="col-lg-7">
+                <div class="d-flex gap-2 mb-3">
+                    <span class="badge hero-badge px-3 py-2"><i class="bi bi-geo-alt-fill me-1"></i>Calgary, Alberta</span>
+                    <span class="badge hero-badge px-3 py-2"><i class="bi bi-award-fill me-1"></i>Wholesale & Retail</span>
+                </div>
+                <h1 class="hero-title mb-3">Premium Auto Glass<br>For Every Vehicle</h1>
+                <p class="hero-sub mb-4">Windshields, side windows, quarter glass, and more. Thousands of parts for vehicles from 1950 to 2026. Fast service, competitive pricing from Calgary.</p>
+                <div class="d-flex gap-3 flex-wrap">
+                    <a href="{{ url_for('main.finder') }}" class="btn btn-primary btn-lg px-4 shadow">
+                        <i class="bi bi-search me-2"></i>Find Your Glass
+                    </a>
+                    <a href="{{ url_for('main.index') }}" class="btn btn-outline-light btn-lg px-4">
+                        <i class="bi bi-grid me-2"></i>Browse Catalog
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- STATS BAR -->
+<section class="stats-section py-4">
+    <div class="container">
+        <div class="row text-center">
+            <div class="col-4">
+                <div class="stat-num">{{ product_count|default(0) }}</div>
+                <div class="opacity-50 small text-uppercase">Parts in Catalog</div>
+            </div>
+            <div class="col-4">
+                <div class="stat-num">{{ make_count|default(0) }}+</div>
+                <div class="opacity-50 small text-uppercase">Vehicle Makes</div>
+            </div>
+            <div class="col-4">
+                <div class="stat-num">{{ in_stock|default(0) }}</div>
+                <div class="opacity-50 small text-uppercase">In Stock Now</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- PRODUCT GALLERY with real images -->
+<section class="py-5">
+    <div class="container">
+        <div class="text-center mb-4">
+            <h2 class="fw-bold">What We Carry</h2>
+            <p class="text-muted">Quality glass for every part of your vehicle</p>
+        </div>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <a href="{{ url_for('main.index', category='Windshield') }}" class="img-card d-block" style="height:320px;">
+                    <img src="https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=800&q=80" alt="Windshield replacement">
+                    <div class="img-overlay">
+                        <div><h5>Front & Rear Windshields</h5><small>OEM-quality laminated & tempered glass</small></div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-3 col-6">
+                <a href="{{ url_for('main.index', category='Side Window') }}" class="img-card d-block" style="height:320px;">
+                    <img src="https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=600&q=80" alt="Side window">
+                    <div class="img-overlay">
+                        <div><h5>Side Windows</h5><small>Driver & passenger</small></div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-3 col-6">
+                <a href="{{ url_for('main.index', category='Quarter Glass') }}" class="img-card d-block" style="height:320px;">
+                    <img src="https://images.unsplash.com/photo-1605559424843-9e4c228bf1c2?w=600&q=80" alt="Quarter glass">
+                    <div class="img-overlay">
+                        <div><h5>Quarter Glass</h5><small>Fixed & vent panels</small></div>
+                    </div>
+                </a>
+            </div>
+        </div>
+        <div class="row g-3 mt-0">
+            <div class="col-md-4">
+                <a href="{{ url_for('main.finder') }}" class="img-card d-block" style="height:220px;">
+                    <img src="https://images.unsplash.com/photo-1583121274602-3e2820c69888?w=600&q=80" alt="Classic cars">
+                    <div class="img-overlay">
+                        <div><h5>Classic Vehicles</h5><small>Parts from 1950+</small></div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-4">
+                <a href="{{ url_for('main.finder') }}" class="img-card d-block" style="height:220px;">
+                    <img src="https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=600&q=80" alt="Trucks and SUVs">
+                    <div class="img-overlay">
+                        <div><h5>Trucks & SUVs</h5><small>F-150, Silverado, RAM & more</small></div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-4">
+                <a href="{{ url_for('main.finder') }}" class="img-card d-block" style="height:220px;">
+                    <img src="https://images.unsplash.com/photo-1617788138017-80ad40651399?w=600&q=80" alt="Luxury and electric vehicles">
+                    <div class="img-overlay">
+                        <div><h5>Luxury & Electric</h5><small>BMW, Mercedes, Tesla</small></div>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold">Find the Right Glass in 3 Steps</h2>
+            <p class="text-muted">Simple, fast, and accurate</p>
+        </div>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <a href="{{ url_for('main.finder') }}" class="card cta-card h-100 p-4 text-center">
+                    <div class="feature-icon bg-primary-subtle text-primary mx-auto mb-3">
+                        <i class="bi bi-calendar3"></i>
+                    </div>
+                    <h5 class="fw-bold">1. Select Year</h5>
+                    <p class="text-muted mb-0">Choose your vehicle's year from 1950 to 2026</p>
+                </a>
+            </div>
+            <div class="col-md-4">
+                <a href="{{ url_for('main.finder') }}" class="card cta-card h-100 p-4 text-center">
+                    <div class="feature-icon bg-success-subtle text-success mx-auto mb-3">
+                        <i class="bi bi-car-front-fill"></i>
+                    </div>
+                    <h5 class="fw-bold">2. Pick Make & Model</h5>
+                    <p class="text-muted mb-0">Toyota, Ford, BMW, Tesla — we cover 40+ brands</p>
+                </a>
+            </div>
+            <div class="col-md-4">
+                <a href="{{ url_for('main.finder') }}" class="card cta-card h-100 p-4 text-center">
+                    <div class="feature-icon bg-warning-subtle text-warning mx-auto mb-3">
+                        <i class="bi bi-cart-check"></i>
+                    </div>
+                    <h5 class="fw-bold">3. Add to Cart</h5>
+                    <p class="text-muted mb-0">See pricing, stock availability, and order instantly</p>
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- PHOTO BANNER with windshield image -->
+<section class="photo-banner">
+    <img src="https://images.unsplash.com/photo-1619767886558-efdc259cde1a?w=1600&q=80" alt="Windshield installation">
+    <div class="overlay">
+        <div>
+            <h2 class="fw-bold display-5 mb-3">Wholesale Pricing Available</h2>
+            <p class="lead mb-4 opacity-85">Auto body shops, dealers, and installers — contact us for bulk rates</p>
+            <a href="{{ url_for('main.contact') }}" class="btn btn-light btn-lg px-4 shadow">
+                <i class="bi bi-telephone me-2"></i>Get a Quote
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- CTA / CONTACT -->
+<section class="py-5">
+    <div class="container">
+        <div class="row g-4 align-items-center">
+            <div class="col-lg-6">
+                <h2 class="fw-bold mb-3">Can't Find Your Part?</h2>
+                <p class="text-muted mb-4">Our inventory is constantly growing. If you don't see what you need, contact us directly and we'll source it for you.</p>
+                <div class="d-flex gap-3 flex-wrap">
+                    <a href="{{ url_for('main.contact') }}" class="btn btn-primary btn-lg">
+                        <i class="bi bi-envelope me-2"></i>Contact Us
+                    </a>
+                    <a href="tel:+15877002726" class="btn btn-outline-dark btn-lg">
+                        <i class="bi bi-telephone me-2"></i>(587) 700-2726
+                    </a>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card border-0 shadow-sm overflow-hidden">
+                    <img src="https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=800&q=80" alt="Vehicles" style="height:180px;object-fit:cover;">
+                    <div class="card-body">
+                        <div class="d-flex align-items-start gap-3 mb-2">
+                            <i class="bi bi-geo-alt-fill text-primary fs-5"></i>
+                            <div><strong>Visit Us</strong><br><span class="text-muted small">1350 42 Ave SE Unit O, Calgary, AB T2G 4V6</span></div>
+                        </div>
+                        <div class="d-flex align-items-start gap-3 mb-2">
+                            <i class="bi bi-envelope-fill text-primary fs-5"></i>
+                            <div><strong>Email</strong><br><a href="mailto:winarisglass@gmail.com" class="text-muted small">winarisglass@gmail.com</a></div>
+                        </div>
+                        <div class="d-flex align-items-start gap-3">
+                            <i class="bi bi-telephone-fill text-primary fs-5"></i>
+                            <div><strong>Call</strong><br><a href="tel:+15877002726" class="text-muted small">+1 (587) 700-2726</a></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

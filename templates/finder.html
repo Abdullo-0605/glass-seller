@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+{% block title %}Auto Glass Finder - Winaris Glass LLC{% endblock %}
+
+{% block extra_css %}
+<style>
+    .finder-container { max-width: 800px; margin: 0 auto; }
+    .finder-header { text-align: center; margin-bottom: 1.5rem; }
+    .finder-header h2 { font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: var(--ag-dark); }
+    .finder-header .breadcrumb-steps { font-size: .8rem; color: #94a3b8; }
+    .finder-header .breadcrumb-steps .active-step { color: var(--ag-primary); font-weight: 700; }
+    .finder-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: .6rem;
+    }
+    @media (max-width: 576px) { .finder-grid { grid-template-columns: repeat(3, 1fr); } }
+    .finder-btn {
+        border: 2px solid #cbd5e1;
+        background: white;
+        border-radius: .5rem;
+        padding: .65rem .5rem;
+        font-size: .9rem;
+        font-weight: 600;
+        color: #334155;
+        cursor: pointer;
+        transition: all .15s;
+        text-align: center;
+    }
+    .finder-btn:hover { border-color: var(--ag-primary); color: var(--ag-primary); background: #eff6ff; }
+    .finder-btn.selected { border-color: var(--ag-primary); background: var(--ag-primary); color: white; }
+    .step-arrow { text-align: center; font-size: 2rem; color: #94a3b8; margin: 1.5rem 0; }
+    .finder-section { display: none; }
+    .finder-section.active { display: block; }
+    .finder-loading { text-align: center; padding: 2rem; color: #94a3b8; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="finder-container">
+
+        <!-- STEP 1: Year -->
+        <div class="finder-section active" id="stepYear">
+            <div class="finder-header">
+                <h2><i class="bi bi-search me-2"></i>Auto Glass Finder</h2>
+                <p class="fw-bold mb-1">Select Year</p>
+                <div class="breadcrumb-steps">
+                    <span class="active-step">Year</span> &rsaquo; Make &rsaquo; Model
+                </div>
+            </div>
+            <div class="finder-grid" id="yearGrid">
+                <div class="finder-loading"><i class="bi bi-hourglass-split"></i> Loading years...</div>
+            </div>
+        </div>
+
+        <!-- Arrow -->
+        <div class="step-arrow" id="arrow1" style="display:none;">
+            <i class="bi bi-arrow-down"></i>
+        </div>
+
+        <!-- STEP 2: Make -->
+        <div class="finder-section" id="stepMake">
+            <div class="finder-header">
+                <h2><i class="bi bi-search me-2"></i>Auto Glass Finder</h2>
+                <p class="fw-bold mb-1">Select Make</p>
+                <div class="breadcrumb-steps">
+                    <span id="crumbYear1"></span> &rsaquo; <span class="active-step">Make</span> &rsaquo; Model
+                </div>
+            </div>
+            <div class="finder-grid" id="makeGrid">
+                <div class="finder-loading"><i class="bi bi-hourglass-split"></i> Loading makes...</div>
+            </div>
+        </div>
+
+        <!-- Arrow -->
+        <div class="step-arrow" id="arrow2" style="display:none;">
+            <i class="bi bi-arrow-down"></i>
+        </div>
+
+        <!-- STEP 3: Model -->
+        <div class="finder-section" id="stepModel">
+            <div class="finder-header">
+                <h2><i class="bi bi-search me-2"></i>Auto Glass Finder</h2>
+                <p class="fw-bold mb-1">Select Model</p>
+                <div class="breadcrumb-steps">
+                    <span id="crumbYear2"></span> &rsaquo; <span id="crumbMake2"></span> &rsaquo; <span class="active-step">Model</span>
+                </div>
+            </div>
+            <div class="finder-grid" id="modelGrid">
+                <div class="finder-loading"><i class="bi bi-hourglass-split"></i> Loading models...</div>
+            </div>
+        </div>
+
+        <!-- Back / Reset -->
+        <div class="text-center mt-4" id="resetArea" style="display:none;">
+            <button class="btn btn-outline-secondary" onclick="resetFinder()">
+                <i class="bi bi-arrow-counterclockwise me-1"></i>Start Over
+            </button>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let selectedYear = null;
+let selectedMake = null;
+
+async function loadYears() {
+    const resp = await fetch('{{ url_for("main.finder_years") }}');
+    const years = await resp.json();
+    const grid = document.getElementById('yearGrid');
+    grid.innerHTML = '';
+    if (!years.length) {
+        grid.innerHTML = '<div class="finder-loading">No vehicle years found in the catalog.</div>';
+        return;
+    }
+    years.forEach(y => {
+        const btn = document.createElement('button');
+        btn.className = 'finder-btn';
+        btn.textContent = y;
+        btn.onclick = () => selectYear(y, btn);
+        grid.appendChild(btn);
+    });
+}
+
+function selectYear(year, btn) {
+    selectedYear = year;
+    document.querySelectorAll('#yearGrid .finder-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+
+    document.getElementById('crumbYear1').textContent = year;
+    document.getElementById('crumbYear2').textContent = year;
+    document.getElementById('arrow1').style.display = 'block';
+    document.getElementById('stepMake').classList.add('active');
+    document.getElementById('resetArea').style.display = 'block';
+
+    // Reset downstream
+    document.getElementById('arrow2').style.display = 'none';
+    document.getElementById('stepModel').classList.remove('active');
+
+    loadMakes(year);
+    document.getElementById('stepMake').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function loadMakes(year) {
+    const grid = document.getElementById('makeGrid');
+    grid.innerHTML = '<div class="finder-loading"><i class="bi bi-hourglass-split"></i> Loading makes...</div>';
+    const resp = await fetch('{{ url_for("main.finder_makes") }}?year=' + year);
+    const makes = await resp.json();
+    grid.innerHTML = '';
+    if (!makes.length) {
+        grid.innerHTML = '<div class="finder-loading">No makes found for ' + year + '.</div>';
+        return;
+    }
+    makes.forEach(m => {
+        const btn = document.createElement('button');
+        btn.className = 'finder-btn';
+        btn.textContent = m;
+        btn.onclick = () => selectMake(m, btn);
+        grid.appendChild(btn);
+    });
+}
+
+function selectMake(make, btn) {
+    selectedMake = make;
+    document.querySelectorAll('#makeGrid .finder-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+
+    document.getElementById('crumbMake2').textContent = make;
+    document.getElementById('arrow2').style.display = 'block';
+    document.getElementById('stepModel').classList.add('active');
+
+    loadModels(selectedYear, make);
+    document.getElementById('stepModel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function loadModels(year, make) {
+    const grid = document.getElementById('modelGrid');
+    grid.innerHTML = '<div class="finder-loading"><i class="bi bi-hourglass-split"></i> Loading models...</div>';
+    const resp = await fetch('{{ url_for("main.finder_models") }}?year=' + year + '&make=' + encodeURIComponent(make));
+    const models = await resp.json();
+    grid.innerHTML = '';
+    if (!models.length) {
+        grid.innerHTML = '<div class="finder-loading">No models found.</div>';
+        return;
+    }
+    models.forEach(m => {
+        const btn = document.createElement('button');
+        btn.className = 'finder-btn';
+        btn.textContent = m;
+        btn.onclick = () => selectModel(m);
+        grid.appendChild(btn);
+    });
+}
+
+function selectModel(model) {
+    window.location.href = '{{ url_for("main.finder_results") }}?year=' + selectedYear
+        + '&make=' + encodeURIComponent(selectedMake)
+        + '&model=' + encodeURIComponent(model);
+}
+
+function resetFinder() {
+    selectedYear = null;
+    selectedMake = null;
+    document.getElementById('arrow1').style.display = 'none';
+    document.getElementById('arrow2').style.display = 'none';
+    document.getElementById('stepMake').classList.remove('active');
+    document.getElementById('stepModel').classList.remove('active');
+    document.getElementById('resetArea').style.display = 'none';
+    document.querySelectorAll('.finder-btn').forEach(b => b.classList.remove('selected'));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+loadYears();
+</script>
+{% endblock %}

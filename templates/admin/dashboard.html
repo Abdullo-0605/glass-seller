@@ -127,4 +127,26 @@
         </div>
     </div>
 </div>
+
+<!-- Clear Database -->
+<div class="card mt-4 border-danger">
+    <div class="card-header bg-white">
+        <h6 class="mb-0 fw-bold text-danger"><i class="bi bi-exclamation-triangle-fill me-2"></i>Danger Zone</h6>
+    </div>
+    <div class="card-body">
+        <p class="text-muted mb-3">Reset <strong>all stock quantities and prices to zero</strong>. Products, orders, and Glass Finder choices are kept.</p>
+        <button class="btn btn-outline-danger btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#clearDbForm">
+            <i class="bi bi-arrow-counterclockwise me-1"></i>Reset All Stock &amp; Prices
+        </button>
+        <div class="collapse mt-3" id="clearDbForm">
+            <form method="post" action="{{ url_for('admin.clear_database') }}" class="d-flex gap-2 align-items-end">
+                <div>
+                    <label class="form-label small fw-bold text-danger">Type <code>RESET STOCK</code> to confirm</label>
+                    <input type="text" name="confirm" class="form-control form-control-sm" placeholder="RESET STOCK" autocomplete="off" style="max-width:250px;">
+                </div>
+                <button type="submit" class="btn btn-danger btn-sm"><i class="bi bi-arrow-counterclockwise me-1"></i>Reset Stock</button>
+            </form>
+        </div>
+    </div>
+</div>
 {% endblock %}

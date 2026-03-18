@@ -5,7 +5,7 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h3 class="fw-bold mb-0"><i class="bi bi-file-earmark-text me-2"></i>Invoices</h3>
     <div class="d-flex gap-2">
-        <a href="{{ url_for('admin.export_invoices') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-download me-1"></i>Export Excel</a>
+        <a href="{{ url_for('admin.export_invoices_route') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-download me-1"></i>Export Excel</a>
         <a href="{{ url_for('admin.import_data') }}" class="btn btn-primary btn-sm"><i class="bi bi-cloud-upload me-1"></i>Import PDF</a>
     </div>
 </div>

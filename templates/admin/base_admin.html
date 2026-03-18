@@ -30,10 +30,10 @@
                 <a href="{{ url_for('admin.import_data') }}" class="sidebar-link {% if 'import' in request.endpoint %}active{% endif %}">
                     <i class="bi bi-cloud-upload me-2"></i>Import Data
                 </a>
-                <a href="{{ url_for('admin.export_products') }}" class="sidebar-link">
+                <a href="{{ url_for('admin.export_products_route') }}" class="sidebar-link">
                     <i class="bi bi-download me-2"></i>Export Products
                 </a>
-                <a href="{{ url_for('admin.export_orders') }}" class="sidebar-link">
+                <a href="{{ url_for('admin.export_orders_route') }}" class="sidebar-link">
                     <i class="bi bi-download me-2"></i>Export Orders
                 </a>
             </div>
