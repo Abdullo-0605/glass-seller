@@ -1,0 +1,100 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Order #{{ order.id }} - Admin - AutoGlass Pro{% endblock %}
+
+{% block admin_content %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('admin.orders') }}">Orders</a></li>
+        <li class="breadcrumb-item active">Order #{{ order.id }}</li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="fw-bold mb-0">Order #{{ order.id }}</h3>
+    <div>
+        {% if order.status == 'PENDING' %}
+        <span class="badge bg-warning text-dark fs-6">Pending</span>
+        {% elif order.status == 'APPROVED' %}
+        <span class="badge bg-success fs-6">Approved</span>
+        {% elif order.status == 'COMPLETED' %}
+        <span class="badge bg-primary fs-6">Completed</span>
+        {% elif order.status == 'CANCELLED' %}
+        <span class="badge bg-secondary fs-6">Cancelled</span>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <!-- Order Items -->
+        <div class="card mb-4">
+            <div class="card-header bg-white"><h6 class="mb-0 fw-bold">Order Items</h6></div>
+            <div class="card-body p-0">
+                <table class="table mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr><th>Product</th><th>Part #</th><th class="text-center">Qty</th><th class="text-end">Price</th><th class="text-end">Subtotal</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for item in order.items %}
+                        <tr>
+                            <td class="fw-semibold">{{ item.product.name }}</td>
+                            <td><code>{{ item.product.part_number or '—' }}</code></td>
+                            <td class="text-center">{{ item.quantity }}</td>
+                            <td class="text-end">${{ "%.2f"|format(item.price) }}</td>
+                            <td class="text-end fw-bold">${{ "%.2f"|format(item.line_total) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="4" class="text-end fw-bold">Total</td>
+                            <td class="text-end fw-bold text-primary fs-5">${{ "%.2f"|format(order.total_amount) }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- Update Status -->
+        <div class="card">
+            <div class="card-header bg-white"><h6 class="mb-0 fw-bold">Update Status</h6></div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('admin.update_order_status', order_id=order.id) }}" class="d-flex gap-2">
+                    <select name="status" class="form-select" style="max-width:200px;">
+                        <option value="PENDING" {{ 'selected' if order.status == 'PENDING' }}>Pending</option>
+                        <option value="APPROVED" {{ 'selected' if order.status == 'APPROVED' }}>Approved</option>
+                        <option value="COMPLETED" {{ 'selected' if order.status == 'COMPLETED' }}>Completed</option>
+                        <option value="CANCELLED" {{ 'selected' if order.status == 'CANCELLED' }}>Cancelled</option>
+                    </select>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Update</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <!-- Customer Info -->
+        <div class="card">
+            <div class="card-header bg-white"><h6 class="mb-0 fw-bold"><i class="bi bi-person me-1"></i>Customer</h6></div>
+            <div class="card-body">
+                <div class="mb-2"><strong>{{ order.customer_name }}</strong></div>
+                {% if order.customer_email %}
+                <div class="mb-1"><i class="bi bi-envelope me-1 text-muted"></i>{{ order.customer_email }}</div>
+                {% endif %}
+                {% if order.customer_phone %}
+                <div class="mb-1"><i class="bi bi-phone me-1 text-muted"></i>{{ order.customer_phone }}</div>
+                {% endif %}
+                {% if order.customer_address %}
+                <div class="mb-1"><i class="bi bi-geo-alt me-1 text-muted"></i>{{ order.customer_address }}</div>
+                {% endif %}
+                {% if order.notes %}
+                <hr>
+                <div class="text-muted small"><strong>Notes:</strong> {{ order.notes }}</div>
+                {% endif %}
+                <hr>
+                <div class="text-muted small">Created: {{ order.created_at.strftime('%b %d, %Y %H:%M') if order.created_at else 'N/A' }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}My Profile - Winaris Glass LLC{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-7">
+            <h2 class="fw-bold mb-4"><i class="bi bi-person-circle me-2"></i>My Profile</h2>
+
+            <div class="card mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0 fw-bold">Account Information</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Username</label>
+                                <input type="text" class="form-control" value="{{ current_user.username }}" disabled>
+                                <small class="text-muted">Username cannot be changed.</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Role</label>
+                                <input type="text" class="form-control" value="{{ current_user.role|capitalize }}" disabled>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Full Name</label>
+                            <input type="text" name="full_name" class="form-control" value="{{ current_user.full_name }}">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Email</label>
+                            <input type="email" name="email" class="form-control" value="{{ current_user.email }}">
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Phone</label>
+                                <input type="tel" name="phone" class="form-control" value="{{ current_user.phone }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Address</label>
+                                <input type="text" name="address" class="form-control" value="{{ current_user.address }}">
+                            </div>
+                        </div>
+
+                        <hr>
+                        <h6 class="fw-bold mb-3">Change Password <small class="text-muted fw-normal">(leave blank to keep current)</small></h6>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">New Password</label>
+                            <input type="password" name="new_password" class="form-control" minlength="6" placeholder="Min 6 characters">
+                        </div>
+
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save Changes</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0 fw-bold">Account Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-muted small">
+                        <p class="mb-1"><strong>Joined:</strong> {{ current_user.created_at.strftime('%B %d, %Y') if current_user.created_at else 'N/A' }}</p>
+                        <p class="mb-0"><strong>Account Type:</strong> {{ 'Administrator' if current_user.is_admin else 'Customer' }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

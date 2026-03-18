@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Checkout - Winaris Glass LLC{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h2 class="fw-bold mb-4"><i class="bi bi-bag-check me-2"></i>Checkout</h2>
+
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="fw-bold mb-3">Customer Information</h5>
+                    <form method="post" action="{{ url_for('main.checkout') }}">
+                        <div class="mb-3">
+                            <label class="form-label">Full Name <span class="text-danger">*</span></label>
+                            <input type="text" name="customer_name" class="form-control" required placeholder="John Doe" value="{{ current_user.full_name if current_user else '' }}">
+                        </div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Email</label>
+                                <input type="email" name="customer_email" class="form-control" placeholder="john@example.com" value="{{ current_user.email if current_user else '' }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Phone</label>
+                                <input type="tel" name="customer_phone" class="form-control" placeholder="(403) 555-1234" value="{{ current_user.phone if current_user else '' }}">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Address</label>
+                            <textarea name="customer_address" class="form-control" rows="2" placeholder="123 Main St, Calgary, AB">{{ current_user.address if current_user else '' }}</textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Order Notes</label>
+                            <textarea name="notes" class="form-control" rows="2" placeholder="Any special instructions..."></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-lg w-100">
+                            <i class="bi bi-check-circle me-2"></i>Place Order
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="fw-bold mb-3">Order Summary</h5>
+                    {% for item in items %}
+                    <div class="d-flex justify-content-between mb-2">
+                        <div>
+                            <div class="fw-semibold">{{ item.product.name }}</div>
+                            <small class="text-muted">Qty: {{ item.quantity }} &times; ${{ "%.2f"|format(item.product.price) }}</small>
+                        </div>
+                        <span class="fw-bold">${{ "%.2f"|format(item.line_total) }}</span>
+                    </div>
+                    {% endfor %}
+                    <hr>
+                    <div class="d-flex justify-content-between fw-bold fs-5">
+                        <span>Total</span>
+                        <span class="text-primary">${{ "%.2f"|format(total) }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

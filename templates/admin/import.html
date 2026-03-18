@@ -1,0 +1,94 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Import Data - Admin - Winaris Glass LLC{% endblock %}
+
+{% block admin_content %}
+<h3 class="fw-bold mb-4"><i class="bi bi-cloud-upload me-2"></i>Import Data</h3>
+
+<div class="row g-4">
+    <!-- PDF Invoice Import -->
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header bg-white">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-file-earmark-pdf text-danger me-2"></i>Import PDF Invoice</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Upload a PDF invoice from your glass supplier. The system will extract line items, create products, and record the invoice automatically.</p>
+                <div class="bg-light rounded p-3 mb-3">
+                    <h6 class="fw-bold mb-2">What happens:</h6>
+                    <ul class="mb-0 small">
+                        <li>PDF text & tables are parsed for item data</li>
+                        <li>New products are created (or existing ones updated by part number)</li>
+                        <li>Invoice is recorded in the invoice tracker</li>
+                        <li>A wholesale shipment record is created</li>
+                        <li>Stock quantities are updated</li>
+                    </ul>
+                </div>
+                <form method="post" action="{{ url_for('admin.import_data') }}" enctype="multipart/form-data">
+                    <input type="hidden" name="import_type" value="pdf_invoice">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Select PDF File</label>
+                        <input type="file" name="file" class="form-control" accept=".pdf" required>
+                    </div>
+                    <button type="submit" class="btn btn-danger"><i class="bi bi-upload me-1"></i>Import PDF Invoice</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Excel Product Import -->
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header bg-white">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-file-earmark-excel text-success me-2"></i>Import Products from Excel</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Upload an Excel (.xlsx) file with your product catalog. Columns are automatically mapped to product fields.</p>
+                <div class="bg-light rounded p-3 mb-3">
+                    <h6 class="fw-bold mb-2">Expected columns (flexible matching):</h6>
+                    <div class="row small">
+                        <div class="col-6">
+                            <ul class="mb-0">
+                                <li><strong>Name</strong> — product name</li>
+                                <li><strong>Category</strong> — glass type</li>
+                                <li><strong>Make</strong> — car manufacturer</li>
+                                <li><strong>Model</strong> — car model</li>
+                                <li><strong>Year Start / End</strong></li>
+                            </ul>
+                        </div>
+                        <div class="col-6">
+                            <ul class="mb-0">
+                                <li><strong>Part Number</strong> / SKU</li>
+                                <li><strong>Price</strong> — selling price</li>
+                                <li><strong>Cost</strong> — wholesale cost</li>
+                                <li><strong>Stock</strong> — quantity</li>
+                                <li><strong>Description</strong></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <form method="post" action="{{ url_for('admin.import_data') }}" enctype="multipart/form-data">
+                    <input type="hidden" name="import_type" value="excel_products">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Select Excel File</label>
+                        <input type="file" name="file" class="form-control" accept=".xlsx,.xls" required>
+                    </div>
+                    <button type="submit" class="btn btn-success"><i class="bi bi-upload me-1"></i>Import Excel Products</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Template Download -->
+<div class="card mt-4">
+    <div class="card-body">
+        <h5 class="fw-bold mb-3"><i class="bi bi-download me-2"></i>Export Current Data</h5>
+        <p class="text-muted">Download your current data as Excel spreadsheets.</p>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{{ url_for('admin.export_products') }}" class="btn btn-outline-success"><i class="bi bi-file-earmark-excel me-1"></i>Export Products</a>
+            <a href="{{ url_for('admin.export_orders') }}" class="btn btn-outline-primary"><i class="bi bi-file-earmark-excel me-1"></i>Export Orders</a>
+            <a href="{{ url_for('admin.export_invoices') }}" class="btn btn-outline-secondary"><i class="bi bi-file-earmark-excel me-1"></i>Export Invoices</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,77 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Shipment {{ shipment.invoice_number }} - Admin{% endblock %}
+
+{% block admin_content %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('admin.shipments') }}">Shipments</a></li>
+        <li class="breadcrumb-item active">{{ shipment.invoice_number or 'Shipment #' ~ shipment.id }}</li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="fw-bold mb-0">{{ shipment.invoice_number or 'Shipment #' ~ shipment.id }}</h3>
+    {% if shipment.status == 'PENDING' %}
+    <form method="post" action="{{ url_for('admin.receive_shipment', shipment_id=shipment.id) }}">
+        <button class="btn btn-success"><i class="bi bi-check-circle me-1"></i>Mark as Received (Update Stock)</button>
+    </form>
+    {% else %}
+    <span class="badge bg-success fs-6">Received</span>
+    {% endif %}
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header bg-white"><h6 class="mb-0 fw-bold">Shipment Items</h6></div>
+            <div class="card-body p-0">
+                <table class="table mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr><th>Product</th><th class="text-center">Qty</th><th class="text-end">Unit Cost</th><th class="text-end">Line Total</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for item in shipment.items %}
+                        <tr>
+                            <td class="fw-semibold">{{ item.product.name }}</td>
+                            <td class="text-center">{{ item.quantity }}</td>
+                            <td class="text-end">${{ "%.2f"|format(item.unit_cost) }}</td>
+                            <td class="text-end fw-bold">${{ "%.2f"|format(item.line_total) }}</td>
+                        </tr>
+                        {% endfor %}
+                        {% if not shipment.items %}
+                        <tr><td colspan="4" class="text-center text-muted py-3">No items in this shipment.</td></tr>
+                        {% endif %}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="3" class="text-end fw-bold">Total</td>
+                            <td class="text-end fw-bold text-primary">${{ "%.2f"|format(shipment.total_cost) }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header bg-white"><h6 class="mb-0 fw-bold">Details</h6></div>
+            <div class="card-body">
+                <div class="mb-2"><strong>Supplier:</strong> {{ shipment.supplier }}</div>
+                <div class="mb-2"><strong>Invoice #:</strong> {{ shipment.invoice_number or '—' }}</div>
+                <div class="mb-2"><strong>Status:</strong>
+                    {% if shipment.status == 'PENDING' %}
+                    <span class="badge bg-warning text-dark">Pending</span>
+                    {% else %}
+                    <span class="badge bg-success">Received</span>
+                    {% endif %}
+                </div>
+                {% if shipment.notes %}
+                <div class="mb-2"><strong>Notes:</strong> {{ shipment.notes }}</div>
+                {% endif %}
+                <div class="text-muted small mt-3">Created: {{ shipment.created_at.strftime('%b %d, %Y %H:%M') if shipment.created_at else 'N/A' }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,56 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Invoice {{ invoice.invoice_number }} - Admin{% endblock %}
+
+{% block admin_content %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('admin.invoices') }}">Invoices</a></li>
+        <li class="breadcrumb-item active">{{ invoice.invoice_number }}</li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="fw-bold mb-0">Invoice: {{ invoice.invoice_number }}</h3>
+    {% if invoice.status == 'PROCESSED' %}
+    <span class="badge bg-success fs-6">Processed</span>
+    {% elif invoice.status == 'IMPORTED' %}
+    <span class="badge bg-info fs-6">Imported</span>
+    {% else %}
+    <span class="badge bg-danger fs-6">Error</span>
+    {% endif %}
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header bg-white"><h6 class="mb-0 fw-bold">Details</h6></div>
+            <div class="card-body">
+                <div class="mb-2"><strong>Invoice #:</strong> {{ invoice.invoice_number }}</div>
+                <div class="mb-2"><strong>Supplier:</strong> {{ invoice.supplier }}</div>
+                <div class="mb-2"><strong>Total:</strong> ${{ "%.2f"|format(invoice.total_amount) }}</div>
+                <div class="mb-2"><strong>Status:</strong> {{ invoice.status }}</div>
+                {% if invoice.file_path %}
+                <div class="mb-2"><strong>File:</strong> <code>{{ invoice.file_path.split('/')[-1].split('\\')[-1] }}</code></div>
+                {% endif %}
+                {% if invoice.notes %}
+                <div class="mb-2"><strong>Notes:</strong> {{ invoice.notes }}</div>
+                {% endif %}
+                <div class="text-muted small mt-3">Imported: {{ invoice.created_at.strftime('%b %d, %Y %H:%M') if invoice.created_at else 'N/A' }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header bg-white"><h6 class="mb-0 fw-bold">Extracted Raw Text</h6></div>
+            <div class="card-body">
+                {% if invoice.raw_text %}
+                <pre class="bg-light p-3 rounded" style="max-height:500px;overflow-y:auto;white-space:pre-wrap;font-size:.85rem;">{{ invoice.raw_text }}</pre>
+                {% else %}
+                <p class="text-muted">No raw text extracted.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

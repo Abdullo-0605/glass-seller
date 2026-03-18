@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}{{ product.name }} - Winaris Glass LLC{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">Catalog</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('main.index', category=product.category) }}">{{ product.category }}</a></li>
+            <li class="breadcrumb-item active">{{ product.name }}</li>
+        </ol>
+    </nav>
+
+    <div class="row g-4">
+        <div class="col-md-5">
+            <div class="card">
+                <div class="d-flex align-items-center justify-content-center bg-light rounded" style="height:350px;">
+                    {% if product.image_url %}
+                    <img src="{{ product.image_url }}" class="img-fluid rounded" style="max-height:100%;object-fit:contain;" alt="{{ product.name }}">
+                    {% else %}
+                    <i class="bi bi-car-front text-muted" style="font-size:6rem;"></i>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-7">
+            <span class="badge bg-primary-subtle text-primary mb-2">{{ product.category }}</span>
+            <h2 class="fw-bold mb-3">{{ product.name }}</h2>
+
+            {% if product.car_make %}
+            <div class="mb-2">
+                <i class="bi bi-car-front-fill text-muted me-1"></i>
+                <strong>Vehicle:</strong> {{ product.car_make }} {{ product.car_model }} {{ product.year_range }}
+            </div>
+            {% endif %}
+
+            {% if product.part_number %}
+            <div class="mb-2">
+                <i class="bi bi-upc text-muted me-1"></i>
+                <strong>Part #:</strong> {{ product.part_number }}
+            </div>
+            {% endif %}
+
+            <div class="mb-3">
+                {% if product.stock_quantity <= 0 %}
+                <span class="badge bg-danger fs-6">Out of Stock</span>
+                {% elif product.stock_quantity <= 5 %}
+                <span class="badge bg-warning text-dark fs-6">Low Stock — {{ product.stock_quantity }} left</span>
+                {% else %}
+                <span class="badge bg-success fs-6">In Stock — {{ product.stock_quantity }} available</span>
+                {% endif %}
+            </div>
+
+            <p class="text-muted">{{ product.description }}</p>
+
+            <div class="border-top pt-3 mt-3">
+                <span class="display-6 fw-bold text-primary">${{ "%.2f"|format(product.price) }}</span>
+            </div>
+
+            <form method="post" action="{{ url_for('main.add_to_cart', product_id=product.id) }}" class="mt-3 d-flex gap-2 align-items-center">
+                <input type="number" name="quantity" value="1" min="1" max="{{ product.stock_quantity }}" class="form-control" style="width:80px;">
+                <button type="submit" class="btn btn-primary btn-lg" {{ 'disabled' if product.stock_quantity <= 0 }}>
+                    <i class="bi bi-cart-plus me-2"></i>Add to Cart
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

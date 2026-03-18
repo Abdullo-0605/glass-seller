@@ -1,0 +1,74 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Product {
+  id            String   @id @default(cuid())
+  name          String
+  description   String   @default("")
+  category      String   @default("General")
+  price         Float
+  stockQuantity Int      @default(0)
+  imageUrl      String   @default("")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  shipmentItems ShipmentItem[]
+  orderItems    OrderItem[]
+}
+
+model WholesaleShipment {
+  id           String   @id @default(cuid())
+  supplier     String
+  invoiceNumber String  @default("")
+  totalCost    Float
+  status       String   @default("PENDING") // PENDING | RECEIVED
+  notes        String   @default("")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  items ShipmentItem[]
+}
+
+model ShipmentItem {
+  id         String @id @default(cuid())
+  quantity   Int
+  unitCost   Float
+
+  shipmentId String
+  shipment   WholesaleShipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  productId  String
+  product    Product @relation(fields: [productId], references: [id])
+}
+
+model Order {
+  id              String   @id @default(cuid())
+  customerName    String
+  customerEmail   String
+  customerPhone   String   @default("")
+  customerAddress String   @default("")
+  status          String   @default("PENDING") // PENDING | APPROVED | REJECTED
+  totalAmount     Float
+  notes           String   @default("")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  items OrderItem[]
+}
+
+model OrderItem {
+  id       String @id @default(cuid())
+  quantity Int
+  price    Float
+
+  orderId  String
+  order    Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+}

@@ -1,0 +1,176 @@
+from datetime import datetime, timezone
+from flask_sqlalchemy import SQLAlchemy
+from werkzeug.security import generate_password_hash, check_password_hash
+
+db = SQLAlchemy()
+
+
+class User(db.Model):
+    __tablename__ = "users"
+
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    email = db.Column(db.String(200), unique=True, nullable=False)
+    password_hash = db.Column(db.String(256), nullable=False)
+    full_name = db.Column(db.String(200), default="")
+    phone = db.Column(db.String(50), default="")
+    address = db.Column(db.Text, default="")
+    role = db.Column(db.String(20), nullable=False, default="customer")  # admin | customer
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+    @property
+    def is_admin(self):
+        return self.role == "admin"
+
+    def __repr__(self):
+        return f"<User {self.username} ({self.role})>"
+
+
+class Product(db.Model):
+    __tablename__ = "products"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, default="")
+    category = db.Column(db.String(100), default="General")
+    car_make = db.Column(db.String(100), default="")
+    car_model = db.Column(db.String(100), default="")
+    car_year_start = db.Column(db.Integer, nullable=True)
+    car_year_end = db.Column(db.Integer, nullable=True)
+    part_number = db.Column(db.String(100), default="")
+    price = db.Column(db.Float, nullable=False, default=0.0)
+    cost = db.Column(db.Float, default=0.0)
+    stock_quantity = db.Column(db.Integer, default=0)
+    image_url = db.Column(db.String(500), default="")
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc),
+                           onupdate=lambda: datetime.now(timezone.utc))
+
+    shipment_items = db.relationship("ShipmentItem", back_populates="product", lazy="dynamic")
+    order_items = db.relationship("OrderItem", back_populates="product", lazy="dynamic")
+
+    @property
+    def year_range(self):
+        if self.car_year_start and self.car_year_end:
+            return f"{self.car_year_start}-{self.car_year_end}"
+        elif self.car_year_start:
+            return f"{self.car_year_start}+"
+        return ""
+
+    @property
+    def profit_margin(self):
+        if self.cost and self.cost > 0:
+            return ((self.price - self.cost) / self.cost) * 100
+        return 0
+
+    def __repr__(self):
+        return f"<Product {self.name}>"
+
+
+class WholesaleShipment(db.Model):
+    __tablename__ = "wholesale_shipments"
+
+    id = db.Column(db.Integer, primary_key=True)
+    supplier = db.Column(db.String(200), nullable=False)
+    invoice_number = db.Column(db.String(100), default="")
+    total_cost = db.Column(db.Float, default=0.0)
+    status = db.Column(db.String(20), default="PENDING")  # PENDING | RECEIVED
+    notes = db.Column(db.Text, default="")
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc),
+                           onupdate=lambda: datetime.now(timezone.utc))
+
+    items = db.relationship("ShipmentItem", back_populates="shipment",
+                            cascade="all, delete-orphan", lazy="joined")
+
+    def __repr__(self):
+        return f"<Shipment {self.invoice_number}>"
+
+
+class ShipmentItem(db.Model):
+    __tablename__ = "shipment_items"
+
+    id = db.Column(db.Integer, primary_key=True)
+    quantity = db.Column(db.Integer, nullable=False)
+    unit_cost = db.Column(db.Float, nullable=False)
+
+    shipment_id = db.Column(db.Integer, db.ForeignKey("wholesale_shipments.id", ondelete="CASCADE"), nullable=False)
+    shipment = db.relationship("WholesaleShipment", back_populates="items")
+
+    product_id = db.Column(db.Integer, db.ForeignKey("products.id"), nullable=False)
+    product = db.relationship("Product", back_populates="shipment_items")
+
+    @property
+    def line_total(self):
+        return self.quantity * self.unit_cost
+
+    def __repr__(self):
+        return f"<ShipmentItem {self.product_id} x{self.quantity}>"
+
+
+class Order(db.Model):
+    __tablename__ = "orders"
+
+    id = db.Column(db.Integer, primary_key=True)
+    customer_name = db.Column(db.String(200), nullable=False)
+    customer_email = db.Column(db.String(200), default="")
+    customer_phone = db.Column(db.String(50), default="")
+    customer_address = db.Column(db.Text, default="")
+    status = db.Column(db.String(20), default="PENDING")  # PENDING | APPROVED | COMPLETED | CANCELLED
+    total_amount = db.Column(db.Float, default=0.0)
+    notes = db.Column(db.Text, default="")
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc),
+                           onupdate=lambda: datetime.now(timezone.utc))
+
+    items = db.relationship("OrderItem", back_populates="order",
+                            cascade="all, delete-orphan", lazy="joined")
+
+    def __repr__(self):
+        return f"<Order #{self.id} - {self.customer_name}>"
+
+
+class OrderItem(db.Model):
+    __tablename__ = "order_items"
+
+    id = db.Column(db.Integer, primary_key=True)
+    quantity = db.Column(db.Integer, nullable=False)
+    price = db.Column(db.Float, nullable=False)
+
+    order_id = db.Column(db.Integer, db.ForeignKey("orders.id", ondelete="CASCADE"), nullable=False)
+    order = db.relationship("Order", back_populates="items")
+
+    product_id = db.Column(db.Integer, db.ForeignKey("products.id"), nullable=False)
+    product = db.relationship("Product", back_populates="order_items")
+
+    @property
+    def line_total(self):
+        return self.quantity * self.price
+
+    def __repr__(self):
+        return f"<OrderItem {self.product_id} x{self.quantity}>"
+
+
+class Invoice(db.Model):
+    __tablename__ = "invoices"
+
+    id = db.Column(db.Integer, primary_key=True)
+    invoice_number = db.Column(db.String(100), nullable=False, unique=True)
+    supplier = db.Column(db.String(200), default="")
+    date = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    total_amount = db.Column(db.Float, default=0.0)
+    file_path = db.Column(db.String(500), default="")
+    raw_text = db.Column(db.Text, default="")
+    status = db.Column(db.String(20), default="IMPORTED")  # IMPORTED | PROCESSED | ERROR
+    notes = db.Column(db.Text, default="")
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    def __repr__(self):
+        return f"<Invoice {self.invoice_number}>"

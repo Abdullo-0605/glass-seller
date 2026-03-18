@@ -1,0 +1,72 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Orders - Admin - Winaris Glass LLC{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="fw-bold mb-0"><i class="bi bi-receipt me-2"></i>Orders</h3>
+    <a href="{{ url_for('admin.export_orders') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-download me-1"></i>Export Excel</a>
+</div>
+
+<!-- Status Filter -->
+<div class="mb-3 d-flex gap-2 flex-wrap">
+    <a href="{{ url_for('admin.orders') }}" class="btn btn-sm {{ 'btn-primary' if not current_status else 'btn-outline-secondary' }}">All</a>
+    <a href="{{ url_for('admin.orders', status='PENDING') }}" class="btn btn-sm {{ 'btn-warning' if current_status == 'PENDING' else 'btn-outline-warning' }}">Pending</a>
+    <a href="{{ url_for('admin.orders', status='APPROVED') }}" class="btn btn-sm {{ 'btn-success' if current_status == 'APPROVED' else 'btn-outline-success' }}">Approved</a>
+    <a href="{{ url_for('admin.orders', status='COMPLETED') }}" class="btn btn-sm {{ 'btn-primary' if current_status == 'COMPLETED' else 'btn-outline-primary' }}">Completed</a>
+    <a href="{{ url_for('admin.orders', status='CANCELLED') }}" class="btn btn-sm {{ 'btn-secondary' if current_status == 'CANCELLED' else 'btn-outline-secondary' }}">Cancelled</a>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Order #</th>
+                        <th>Customer</th>
+                        <th>Items</th>
+                        <th class="text-end">Total</th>
+                        <th>Status</th>
+                        <th>Date</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in orders %}
+                    <tr>
+                        <td><a href="{{ url_for('admin.order_detail', order_id=order.id) }}" class="fw-bold">#{{ order.id }}</a></td>
+                        <td>
+                            <div class="fw-semibold">{{ order.customer_name }}</div>
+                            <small class="text-muted">{{ order.customer_email }}</small>
+                        </td>
+                        <td>{{ order.items|length }} item{{ 's' if order.items|length != 1 }}</td>
+                        <td class="text-end fw-bold">${{ "%.2f"|format(order.total_amount) }}</td>
+                        <td>
+                            {% if order.status == 'PENDING' %}
+                            <span class="badge bg-warning text-dark">Pending</span>
+                            {% elif order.status == 'APPROVED' %}
+                            <span class="badge bg-success">Approved</span>
+                            {% elif order.status == 'COMPLETED' %}
+                            <span class="badge bg-primary">Completed</span>
+                            {% elif order.status == 'CANCELLED' %}
+                            <span class="badge bg-secondary">Cancelled</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ order.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-muted">{{ order.created_at.strftime('%b %d, %Y') if order.created_at else '' }}</td>
+                        <td class="text-end">
+                            <a href="{{ url_for('admin.order_detail', order_id=order.id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% if not orders %}
+                    <tr><td colspan="7" class="text-center text-muted py-4">No orders found.</td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<div class="text-muted mt-2 small">{{ orders|length }} order{{ 's' if orders|length != 1 }}</div>
+{% endblock %}
