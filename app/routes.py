@@ -9,8 +9,8 @@ from flask import (
 )
 from werkzeug.utils import secure_filename
 
-from .models import db, Product, WholesaleShipment, ShipmentItem, Order, OrderItem, Invoice
-from .auth import login_required, admin_required
+from .models import db, Product, WholesaleShipment, ShipmentItem, Order, OrderItem, Invoice, User, NAGS_PREFIXES, nags_category
+from .auth import login_required, approved_required, admin_required
 from .analytics import answer_question
 from .import_utils import (
     parse_pdf_invoice, parse_products_file,
@@ -103,6 +103,7 @@ def finder_models():
 
 
 @main.route("/finder/results")
+@login_required
 def finder_results():
     year = request.args.get("year", type=int)
     make = request.args.get("make", "")
@@ -169,9 +170,11 @@ def contact():
 # ---------------------------------------------------------------------------
 
 @main.route("/catalog")
+@login_required
 def index():
     category = request.args.get("category", "")
     search = request.args.get("search", "")
+    nags_filter = request.args.get("nags", "")
     sort = request.args.get("sort", "name")
     page = request.args.get("page", 1, type=int)
     per_page = 24
@@ -179,12 +182,15 @@ def index():
     query = Product.query
     if category:
         query = query.filter(Product.category == category)
+    if nags_filter:
+        query = query.filter(Product.nags_code.ilike(f"{nags_filter}%"))
     if search:
         term = f"%{search}%"
         query = query.filter(
             db.or_(
                 Product.name.ilike(term),
                 Product.part_number.ilike(term),
+                Product.nags_code.ilike(term),
                 Product.car_make.ilike(term),
                 Product.car_model.ilike(term),
             )
@@ -215,6 +221,8 @@ def index():
         categories=categories,
         current_category=category,
         search=search,
+        nags_filter=nags_filter,
+        nags_prefixes=NAGS_PREFIXES,
         sort=sort,
         cart_count=cart_count,
     )
@@ -290,7 +298,7 @@ def clear_cart():
 
 
 # ---------------------------------------------------------------------------
-# CHECKOUT (order creation — no payment)
+# CHECKOUT — payment options, pickup/delivery, multi-address
 # ---------------------------------------------------------------------------
 
 @main.route("/checkout", methods=["GET", "POST"])
@@ -305,18 +313,51 @@ def checkout():
         name = request.form.get("customer_name", "").strip()
         email = request.form.get("customer_email", "").strip()
         phone = request.form.get("customer_phone", "").strip()
-        address = request.form.get("customer_address", "").strip()
         notes = request.form.get("notes", "").strip()
 
+        # Payment method
+        payment_method = request.form.get("payment_method", "cash")  # cash | zelle_echeck
+
+        # Fulfillment type
+        fulfillment_type = request.form.get("fulfillment_type", "pickup")  # pickup | delivery
+
+        # Pickup details
+        pickup_time = request.form.get("pickup_time", "").strip()
+
+        # Delivery details — collect multiple addresses
+        delivery_time = request.form.get("delivery_time", "").strip()
+        delivery_note = request.form.get("delivery_note", "").strip()
+        delivery_addresses_list = []
+        for i in range(1, 11):
+            addr = request.form.get(f"delivery_address_{i}", "").strip()
+            if addr:
+                delivery_addresses_list.append(addr)
+
         if not name:
-            flash("Customer name is required.", "danger")
+            flash("Full name is required.", "danger")
+            return redirect(url_for("main.checkout"))
+
+        if fulfillment_type == "pickup" and not pickup_time:
+            flash("Please provide an approximate pickup time.", "danger")
+            return redirect(url_for("main.checkout"))
+
+        if fulfillment_type == "delivery" and not delivery_addresses_list:
+            flash("Please provide at least one delivery address.", "danger")
             return redirect(url_for("main.checkout"))
 
         order = Order(
+            user_id=g.user.id,
             customer_name=name,
             customer_email=email,
             customer_phone=phone,
-            customer_address=address,
+            customer_address=delivery_addresses_list[0] if delivery_addresses_list else "",
+            payment_method=payment_method,
+            payment_status="unpaid",
+            fulfillment_type=fulfillment_type,
+            pickup_time=pickup_time if fulfillment_type == "pickup" else "",
+            delivery_addresses=json.dumps(delivery_addresses_list) if fulfillment_type == "delivery" else "",
+            delivery_time=delivery_time if fulfillment_type == "delivery" else "",
+            delivery_note=delivery_note,
             notes=notes,
             status="PENDING",
             total_amount=0.0,
@@ -382,6 +423,8 @@ def dashboard():
     recent_orders = Order.query.order_by(Order.created_at.desc()).limit(5).all()
     low_stock_products = Product.query.filter(Product.stock_quantity <= 5).order_by(Product.stock_quantity.asc()).limit(10).all()
 
+    pending_users = User.query.filter_by(approval_status="pending").count()
+
     return render_template(
         "admin/dashboard.html",
         product_count=product_count,
@@ -393,7 +436,58 @@ def dashboard():
         total_revenue=total_revenue,
         recent_orders=recent_orders,
         low_stock_products=low_stock_products,
+        pending_users=pending_users,
     )
+
+
+# ---------------------------------------------------------------------------
+# ADMIN — USER APPROVAL
+# ---------------------------------------------------------------------------
+
+@admin.route("/users")
+@admin_required
+def manage_users():
+    status_filter = request.args.get("status", "pending")
+    if status_filter == "all":
+        users = User.query.filter(User.role != "admin").order_by(User.created_at.desc()).all()
+    else:
+        users = User.query.filter_by(approval_status=status_filter).filter(User.role != "admin").order_by(User.created_at.desc()).all()
+    return render_template("admin/users.html", users=users, current_status=status_filter)
+
+
+@admin.route("/users/<int:user_id>/approve", methods=["POST"])
+@admin_required
+def approve_user(user_id):
+    user = db.get_or_404(User, user_id)
+    user.is_approved = True
+    user.approval_status = "approved"
+    db.session.commit()
+    flash(f"User '{user.full_name or user.username}' has been approved.", "success")
+    return redirect(url_for("admin.manage_users"))
+
+
+@admin.route("/users/<int:user_id>/reject", methods=["POST"])
+@admin_required
+def reject_user(user_id):
+    user = db.get_or_404(User, user_id)
+    user.is_approved = False
+    user.approval_status = "rejected"
+    db.session.commit()
+    flash(f"User '{user.full_name or user.username}' has been rejected.", "warning")
+    return redirect(url_for("admin.manage_users"))
+
+
+@admin.route("/users/<int:user_id>/delete", methods=["POST"])
+@admin_required
+def delete_user(user_id):
+    user = db.get_or_404(User, user_id)
+    if user.is_admin:
+        flash("Cannot delete admin users.", "danger")
+        return redirect(url_for("admin.manage_users"))
+    db.session.delete(user)
+    db.session.commit()
+    flash(f"User '{user.username}' deleted.", "warning")
+    return redirect(url_for("admin.manage_users"))
 
 
 # ---------------------------------------------------------------------------

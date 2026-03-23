@@ -213,9 +213,12 @@ def seed():
             username="admin",
             email="admin@winarisglass.com",
             full_name="Winaris Admin",
-            phone="(403) 555-0100",
-            address="Calgary, AB",
+            phone="(587) 700-2726",
+            address="1350 42 Ave SE Unit O, Calgary, AB T2G 4V6",
+            company_name="Winaris Glass LLC",
             role="admin",
+            is_approved=True,
+            approval_status="approved",
         )
         admin_user.set_password("admin123")
         db.session.add(admin_user)
@@ -226,13 +229,16 @@ def seed():
             full_name="Mike Johnson",
             phone="(403) 555-6543",
             address="456 Oak Ave, Calgary, AB T2P 1A1",
+            company_name="Johnson Auto Body",
             role="customer",
+            is_approved=True,
+            approval_status="approved",
         )
         customer_user.set_password("customer123")
         db.session.add(customer_user)
         db.session.flush()
         print("  Admin  -> username: admin      password: admin123")
-        print("  User   -> username: customer   password: customer123")
+        print("  User   -> username: customer   password: customer123 (pre-approved)")
 
         print("Creating products...")
         products = []

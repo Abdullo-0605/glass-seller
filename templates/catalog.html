@@ -46,6 +46,31 @@
                    class="sidebar-link {{ 'active' if sort == 'price_desc' }}">Price: High to Low</a>
                 <a href="{{ url_for('main.index', category=current_category, search=search, sort='newest') }}"
                    class="sidebar-link {{ 'active' if sort == 'newest' }}">Newest First</a>
+
+                <hr>
+                <h6 class="fw-bold text-uppercase text-muted mb-3"><i class="bi bi-hash me-1"></i>NAGS Glass Type</h6>
+                <a href="{{ url_for('main.index', search=search, sort=sort) }}"
+                   class="sidebar-link {{ 'active' if not nags_filter }}">All Types</a>
+                <a href="{{ url_for('main.index', nags='FW', search=search, sort=sort) }}"
+                   class="sidebar-link {{ 'active' if nags_filter == 'FW' }}">FW — Windshield</a>
+                <a href="{{ url_for('main.index', nags='DW', search=search, sort=sort) }}"
+                   class="sidebar-link {{ 'active' if nags_filter == 'DW' }}">DW — Windshield</a>
+                <a href="{{ url_for('main.index', nags='FD', search=search, sort=sort) }}"
+                   class="sidebar-link {{ 'active' if nags_filter == 'FD' }}">FD — Door Glass</a>
+                <a href="{{ url_for('main.index', nags='DD', search=search, sort=sort) }}"
+                   class="sidebar-link {{ 'active' if nags_filter == 'DD' }}">DD — Door Glass</a>
+                <a href="{{ url_for('main.index', nags='FB', search=search, sort=sort) }}"
+                   class="sidebar-link {{ 'active' if nags_filter == 'FB' }}">FB — Back Glass</a>
+                <a href="{{ url_for('main.index', nags='DB', search=search, sort=sort) }}"
+                   class="sidebar-link {{ 'active' if nags_filter == 'DB' }}">DB — Back Glass</a>
+                <a href="{{ url_for('main.index', nags='FQ', search=search, sort=sort) }}"
+                   class="sidebar-link {{ 'active' if nags_filter == 'FQ' }}">FQ — Quarter Glass</a>
+                <a href="{{ url_for('main.index', nags='DQ', search=search, sort=sort) }}"
+                   class="sidebar-link {{ 'active' if nags_filter == 'DQ' }}">DQ — Quarter Glass</a>
+                <a href="{{ url_for('main.index', nags='FV', search=search, sort=sort) }}"
+                   class="sidebar-link {{ 'active' if nags_filter == 'FV' }}">FV — Vent Glass</a>
+                <a href="{{ url_for('main.index', nags='DV', search=search, sort=sort) }}"
+                   class="sidebar-link {{ 'active' if nags_filter == 'DV' }}">DV — Vent Glass</a>
             </div>
         </div>
 
@@ -85,20 +110,28 @@
                                 {% endif %}
                             </div>
                             <h6 class="card-title fw-bold">{{ product.name }}</h6>
+                            {% if product.display_code %}
+                            <div class="mb-1"><span class="badge bg-dark"><i class="bi bi-hash me-1"></i>{{ product.display_code }}</span></div>
+                            {% endif %}
                             {% if product.car_make %}
                             <small class="text-muted"><i class="bi bi-car-front-fill me-1"></i>{{ product.car_make }} {{ product.car_model }} {{ product.year_range }}</small>
                             {% endif %}
-                            {% if product.part_number %}
+                            {% if product.part_number and product.part_number != product.nags_code %}
                             <small class="text-muted"><i class="bi bi-upc me-1"></i>{{ product.part_number }}</small>
                             {% endif %}
                             <div class="mt-auto pt-3 d-flex justify-content-between align-items-center">
                                 <span class="fs-5 fw-bold text-primary">${{ "%.2f"|format(product.price) }}</span>
-                                <form method="post" action="{{ url_for('main.add_to_cart', product_id=product.id) }}" style="position:relative;z-index:2;">
-                                    <input type="hidden" name="quantity" value="1">
-                                    <button type="submit" class="btn btn-primary btn-sm" {{ 'disabled' if product.stock_quantity <= 0 }}>
-                                        <i class="bi bi-cart-plus me-1"></i>Add
-                                    </button>
-                                </form>
+                                <div class="d-flex gap-1" style="position:relative;z-index:2;">
+                                    {% if current_user and current_user.is_admin %}
+                                    <a href="{{ url_for('admin.edit_product', product_id=product.id) }}" class="btn btn-outline-secondary btn-sm" title="Edit"><i class="bi bi-pencil"></i></a>
+                                    {% endif %}
+                                    <form method="post" action="{{ url_for('main.add_to_cart', product_id=product.id) }}">
+                                        <input type="hidden" name="quantity" value="1">
+                                        <button type="submit" class="btn btn-primary btn-sm" {{ 'disabled' if product.stock_quantity <= 0 }}>
+                                            <i class="bi bi-cart-plus me-1"></i>Add
+                                        </button>
+                                    </form>
+                                </div>
                             </div>
                         </div>
                         <a href="{{ url_for('main.product_detail', product_id=product.id) }}" class="stretched-link" style="z-index:1;"></a>

@@ -1,54 +1,174 @@
 {% extends "base.html" %}
 {% block title %}Checkout - Winaris Glass LLC{% endblock %}
 
+{% block extra_css %}
+<style>
+    .option-card { border: 2px solid #e2e8f0; border-radius: .75rem; padding: 1rem; cursor: pointer; transition: all .15s; }
+    .option-card:hover { border-color: #94a3b8; }
+    .option-card.selected { border-color: var(--ag-primary); background: #eff6ff; }
+    .option-card input[type="radio"] { display: none; }
+    .delivery-addr { border: 1px solid #e2e8f0; border-radius: .5rem; padding: .75rem; margin-bottom: .5rem; }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container py-4">
     <h2 class="fw-bold mb-4"><i class="bi bi-bag-check me-2"></i>Checkout</h2>
 
+    <form method="post" action="{{ url_for('main.checkout') }}" id="checkoutForm">
     <div class="row g-4">
         <div class="col-lg-7">
-            <div class="card">
+            <!-- Customer Info -->
+            <div class="card mb-3">
                 <div class="card-body">
-                    <h5 class="fw-bold mb-3">Customer Information</h5>
-                    <form method="post" action="{{ url_for('main.checkout') }}">
-                        <div class="mb-3">
-                            <label class="form-label">Full Name <span class="text-danger">*</span></label>
-                            <input type="text" name="customer_name" class="form-control" required placeholder="John Doe" value="{{ current_user.full_name if current_user else '' }}">
+                    <h5 class="fw-bold mb-3"><i class="bi bi-person me-2"></i>Customer Information</h5>
+                    <div class="mb-3">
+                        <label class="form-label">Full Name <span class="text-danger">*</span></label>
+                        <input type="text" name="customer_name" class="form-control" required value="{{ current_user.full_name if current_user else '' }}">
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Email</label>
+                            <input type="email" name="customer_email" class="form-control" value="{{ current_user.email if current_user else '' }}">
                         </div>
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label">Email</label>
-                                <input type="email" name="customer_email" class="form-control" placeholder="john@example.com" value="{{ current_user.email if current_user else '' }}">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Phone</label>
-                                <input type="tel" name="customer_phone" class="form-control" placeholder="(403) 555-1234" value="{{ current_user.phone if current_user else '' }}">
-                            </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Phone <span class="text-danger">*</span></label>
+                            <input type="tel" name="customer_phone" class="form-control" required value="{{ current_user.phone if current_user else '' }}">
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label">Address</label>
-                            <textarea name="customer_address" class="form-control" rows="2" placeholder="123 Main St, Calgary, AB">{{ current_user.address if current_user else '' }}</textarea>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Order Notes</label>
-                            <textarea name="notes" class="form-control" rows="2" placeholder="Any special instructions..."></textarea>
-                        </div>
-                        <button type="submit" class="btn btn-primary btn-lg w-100">
-                            <i class="bi bi-check-circle me-2"></i>Place Order
-                        </button>
-                    </form>
+                    </div>
                 </div>
             </div>
+
+            <!-- Payment Method -->
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5 class="fw-bold mb-3"><i class="bi bi-credit-card me-2"></i>Payment Method</h5>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="option-card d-block selected" id="pay_cash_card" onclick="selectPayment('cash')">
+                                <input type="radio" name="payment_method" value="cash" checked>
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-cash-stack text-success fs-4"></i>
+                                    <div>
+                                        <div class="fw-bold">Pay Cash at Store</div>
+                                        <small class="text-muted">Pay when you pick up or on delivery</small>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="option-card d-block" id="pay_zelle_card" onclick="selectPayment('zelle_echeck')">
+                                <input type="radio" name="payment_method" value="zelle_echeck">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-bank text-primary fs-4"></i>
+                                    <div>
+                                        <div class="fw-bold">Zelle / eCheck</div>
+                                        <small class="text-muted">Contact admin to arrange payment</small>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="alert alert-info mt-3 mb-0 small" id="zelle_info" style="display:none;">
+                        <i class="bi bi-info-circle me-1"></i>After placing your order, contact us at <strong>(587) 700-2726</strong> or <strong>winarisglass@gmail.com</strong> to arrange Zelle/eCheck payment.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fulfillment: Pickup or Delivery -->
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5 class="fw-bold mb-3"><i class="bi bi-truck me-2"></i>Pickup or Delivery</h5>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="option-card d-block selected" id="fulfill_pickup_card" onclick="selectFulfillment('pickup')">
+                                <input type="radio" name="fulfillment_type" value="pickup" checked>
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-shop text-warning fs-4"></i>
+                                    <div>
+                                        <div class="fw-bold">Pickup at Store</div>
+                                        <small class="text-muted">1350 42 Ave SE, Calgary</small>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="option-card d-block" id="fulfill_delivery_card" onclick="selectFulfillment('delivery')">
+                                <input type="radio" name="fulfillment_type" value="delivery">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-truck text-primary fs-4"></i>
+                                    <div>
+                                        <div class="fw-bold">Delivery</div>
+                                        <small class="text-muted">Free within Calgary</small>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Pickup Section -->
+                    <div id="pickup_section">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Approximate Pickup Time <span class="text-danger">*</span></label>
+                            <input type="text" name="pickup_time" class="form-control" placeholder="e.g. Tomorrow 2:00 PM, Friday morning">
+                            <small class="text-muted">Store: 1350 42 Ave SE Unit O, Calgary, AB T2G 4V6</small>
+                        </div>
+                    </div>
+
+                    <!-- Delivery Section -->
+                    <div id="delivery_section" style="display:none;">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Delivery Time</label>
+                            <input type="text" name="delivery_time" class="form-control" placeholder="e.g. Tomorrow afternoon, ASAP">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label fw-semibold">Delivery Address(es) <span class="text-danger">*</span></label>
+                            <small class="text-muted d-block mb-2">Add multiple addresses if delivering to more than one location.</small>
+                        </div>
+                        <div id="address_list">
+                            <div class="delivery-addr d-flex gap-2 align-items-start">
+                                <div class="flex-grow-1">
+                                    <input type="text" name="delivery_address_1" class="form-control" placeholder="Address 1 — e.g. 123 Main St, Calgary, AB">
+                                </div>
+                                <span class="badge bg-primary-subtle text-primary mt-2">1</span>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-outline-primary btn-sm mt-2" onclick="addAddress()">
+                            <i class="bi bi-plus-lg me-1"></i>Add Another Address
+                        </button>
+                        <div class="mb-3 mt-3">
+                            <label class="form-label">Delivery Notes</label>
+                            <textarea name="delivery_note" class="form-control" rows="2" placeholder="Gate code, special instructions..."></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Order Notes -->
+            <div class="card mb-3">
+                <div class="card-body">
+                    <label class="form-label fw-semibold">Order Notes</label>
+                    <textarea name="notes" class="form-control" rows="2" placeholder="Any special instructions..."></textarea>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-lg w-100">
+                <i class="bi bi-check-circle me-2"></i>Place Order
+            </button>
         </div>
 
+        <!-- Order Summary -->
         <div class="col-lg-5">
-            <div class="card">
+            <div class="card sticky-top" style="top:80px;">
                 <div class="card-body">
                     <h5 class="fw-bold mb-3">Order Summary</h5>
                     {% for item in items %}
                     <div class="d-flex justify-content-between mb-2">
                         <div>
                             <div class="fw-semibold">{{ item.product.name }}</div>
+                            {% if item.product.display_code %}
+                            <small class="text-primary fw-bold">{{ item.product.display_code }}</small><br>
+                            {% endif %}
                             <small class="text-muted">Qty: {{ item.quantity }} &times; ${{ "%.2f"|format(item.product.price) }}</small>
                         </div>
                         <span class="fw-bold">${{ "%.2f"|format(item.line_total) }}</span>
@@ -63,5 +183,37 @@
             </div>
         </div>
     </div>
+    </form>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let addressCount = 1;
+
+function selectPayment(method) {
+    document.querySelectorAll('[id^="pay_"]').forEach(c => c.classList.remove('selected'));
+    document.getElementById('pay_' + method + '_card').classList.add('selected');
+    document.querySelector('input[name="payment_method"][value="' + method + '"]').checked = true;
+    document.getElementById('zelle_info').style.display = method === 'zelle_echeck' ? 'block' : 'none';
+}
+
+function selectFulfillment(type) {
+    document.querySelectorAll('[id^="fulfill_"]').forEach(c => c.classList.remove('selected'));
+    document.getElementById('fulfill_' + type + '_card').classList.add('selected');
+    document.querySelector('input[name="fulfillment_type"][value="' + type + '"]').checked = true;
+    document.getElementById('pickup_section').style.display = type === 'pickup' ? 'block' : 'none';
+    document.getElementById('delivery_section').style.display = type === 'delivery' ? 'block' : 'none';
+}
+
+function addAddress() {
+    addressCount++;
+    const div = document.createElement('div');
+    div.className = 'delivery-addr d-flex gap-2 align-items-start';
+    div.innerHTML = '<div class="flex-grow-1"><input type="text" name="delivery_address_' + addressCount + '" class="form-control" placeholder="Address ' + addressCount + '"></div>' +
+        '<span class="badge bg-primary-subtle text-primary mt-2">' + addressCount + '</span>' +
+        '<button type="button" class="btn btn-sm btn-outline-danger mt-1" onclick="this.parentElement.remove()"><i class="bi bi-x"></i></button>';
+    document.getElementById('address_list').appendChild(div);
+}
+</script>
 {% endblock %}

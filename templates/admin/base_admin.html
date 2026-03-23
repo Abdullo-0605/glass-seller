@@ -22,6 +22,9 @@
                 <a href="{{ url_for('admin.invoices') }}" class="sidebar-link {% if 'invoice' in request.endpoint %}active{% endif %}">
                     <i class="bi bi-file-earmark-text me-2"></i>Invoices
                 </a>
+                <a href="{{ url_for('admin.manage_users') }}" class="sidebar-link {% if 'user' in request.endpoint %}active{% endif %}">
+                    <i class="bi bi-people me-2"></i>Users
+                </a>
                 <hr>
                 <a href="{{ url_for('admin.chat') }}" class="sidebar-link {% if 'chat' in request.endpoint %}active{% endif %}">
                     <i class="bi bi-chat-dots me-2"></i>AI Analytics

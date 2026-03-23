@@ -35,7 +35,16 @@
             </div>
             {% endif %}
 
-            {% if product.part_number %}
+            {% if product.display_code %}
+            <div class="mb-2">
+                <span class="badge bg-dark fs-6"><i class="bi bi-hash me-1"></i>{{ product.display_code }}</span>
+                {% if product.nags_type %}
+                <span class="badge bg-primary-subtle text-primary">{{ product.nags_type }}</span>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            {% if product.part_number and product.part_number != product.nags_code %}
             <div class="mb-2">
                 <i class="bi bi-upc text-muted me-1"></i>
                 <strong>Part #:</strong> {{ product.part_number }}

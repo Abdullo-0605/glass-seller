@@ -37,6 +37,14 @@
         </div>
     </div>
     <div class="col-md-4 col-xl-2">
+        <a href="{{ url_for('admin.manage_users', status='pending') }}" class="text-decoration-none">
+        <div class="card stat-card p-3" style="border-left-color:#f97316;">
+            <div class="text-muted small">Pending Users</div>
+            <div class="stat-value {{ 'text-danger' if pending_users > 0 }}">{{ pending_users }}</div>
+        </div>
+        </a>
+    </div>
+    <div class="col-md-4 col-xl-2">
         <div class="card stat-card p-3" style="border-left-color:#ef4444;">
             <div class="text-muted small">Low Stock</div>
             <div class="stat-value">{{ low_stock }}</div>

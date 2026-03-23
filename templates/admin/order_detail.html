@@ -74,7 +74,7 @@
 
     <div class="col-lg-4">
         <!-- Customer Info -->
-        <div class="card">
+        <div class="card mb-3">
             <div class="card-header bg-white"><h6 class="mb-0 fw-bold"><i class="bi bi-person me-1"></i>Customer</h6></div>
             <div class="card-body">
                 <div class="mb-2"><strong>{{ order.customer_name }}</strong></div>
@@ -84,17 +84,76 @@
                 {% if order.customer_phone %}
                 <div class="mb-1"><i class="bi bi-phone me-1 text-muted"></i>{{ order.customer_phone }}</div>
                 {% endif %}
-                {% if order.customer_address %}
-                <div class="mb-1"><i class="bi bi-geo-alt me-1 text-muted"></i>{{ order.customer_address }}</div>
-                {% endif %}
-                {% if order.notes %}
-                <hr>
-                <div class="text-muted small"><strong>Notes:</strong> {{ order.notes }}</div>
-                {% endif %}
                 <hr>
                 <div class="text-muted small">Created: {{ order.created_at.strftime('%b %d, %Y %H:%M') if order.created_at else 'N/A' }}</div>
             </div>
         </div>
+
+        <!-- Payment -->
+        <div class="card mb-3">
+            <div class="card-header bg-white"><h6 class="mb-0 fw-bold"><i class="bi bi-credit-card me-1"></i>Payment</h6></div>
+            <div class="card-body">
+                <div class="mb-2">
+                    <strong>Method:</strong>
+                    {% if order.payment_method == 'cash' %}
+                    <span class="badge bg-success">Cash at Store</span>
+                    {% elif order.payment_method == 'zelle_echeck' %}
+                    <span class="badge bg-primary">Zelle / eCheck</span>
+                    {% else %}
+                    <span class="badge bg-secondary">{{ order.payment_method }}</span>
+                    {% endif %}
+                </div>
+                <div>
+                    <strong>Status:</strong>
+                    {% if order.payment_status == 'paid' %}
+                    <span class="badge bg-success">Paid</span>
+                    {% else %}
+                    <span class="badge bg-warning text-dark">Unpaid</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Fulfillment -->
+        <div class="card mb-3">
+            <div class="card-header bg-white">
+                <h6 class="mb-0 fw-bold">
+                    {% if order.fulfillment_type == 'delivery' %}
+                    <i class="bi bi-truck me-1"></i>Delivery
+                    {% else %}
+                    <i class="bi bi-shop me-1"></i>Pickup
+                    {% endif %}
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if order.fulfillment_type == 'pickup' %}
+                <div class="mb-2"><strong>Type:</strong> <span class="badge bg-warning text-dark">Store Pickup</span></div>
+                {% if order.pickup_time %}
+                <div class="mb-1"><i class="bi bi-clock me-1 text-muted"></i><strong>Pickup Time:</strong> {{ order.pickup_time }}</div>
+                {% endif %}
+                <div class="small text-muted mt-2">1350 42 Ave SE Unit O, Calgary, AB T2G 4V6</div>
+                {% else %}
+                <div class="mb-2"><strong>Type:</strong> <span class="badge bg-primary">Delivery</span></div>
+                {% if order.delivery_time %}
+                <div class="mb-1"><i class="bi bi-clock me-1 text-muted"></i><strong>Delivery Time:</strong> {{ order.delivery_time }}</div>
+                {% endif %}
+                {% for addr in order.delivery_address_list %}
+                <div class="mb-1"><i class="bi bi-geo-alt me-1 text-muted"></i><strong>Address {{ loop.index }}:</strong> {{ addr }}</div>
+                {% endfor %}
+                {% if order.delivery_note %}
+                <div class="mt-2 small text-muted"><strong>Notes:</strong> {{ order.delivery_note }}</div>
+                {% endif %}
+                {% endif %}
+            </div>
+        </div>
+
+        {% if order.notes %}
+        <div class="card">
+            <div class="card-body">
+                <div class="text-muted small"><strong>Order Notes:</strong> {{ order.notes }}</div>
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

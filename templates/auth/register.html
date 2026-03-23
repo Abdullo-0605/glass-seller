@@ -10,7 +10,7 @@
                     <div class="text-center mb-4">
                         <i class="bi bi-person-plus text-primary" style="font-size:2.5rem;"></i>
                         <h3 class="fw-bold mt-2">Create Account</h3>
-                        <p class="text-muted">Join Winaris Glass to browse and order car glass parts</p>
+                        <p class="text-muted">Register for a Winaris Glass account. Your account will be reviewed and approved by our team.</p>
                     </div>
 
                     <form method="post">
@@ -20,8 +20,8 @@
                                 <input type="text" name="username" class="form-control" required minlength="3" placeholder="johndoe">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label fw-semibold">Full Name</label>
-                                <input type="text" name="full_name" class="form-control" placeholder="John Doe">
+                                <label class="form-label fw-semibold">Full Name <span class="text-danger">*</span></label>
+                                <input type="text" name="full_name" class="form-control" required placeholder="John Doe">
                             </div>
                         </div>
 
@@ -33,10 +33,15 @@
                             </div>
                         </div>
 
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Company Name</label>
+                            <input type="text" name="company_name" class="form-control" placeholder="Your auto body shop or business name (optional)">
+                        </div>
+
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
-                                <label class="form-label fw-semibold">Phone</label>
-                                <input type="tel" name="phone" class="form-control" placeholder="(403) 555-1234">
+                                <label class="form-label fw-semibold">Phone <span class="text-danger">*</span></label>
+                                <input type="tel" name="phone" class="form-control" required placeholder="(403) 555-1234">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Address</label>
@@ -61,8 +66,12 @@
                             </div>
                         </div>
 
+                        <div class="alert alert-info small mb-3">
+                            <i class="bi bi-info-circle me-1"></i>Your account will be reviewed by our admin. You'll be able to access the catalog and place orders once approved.
+                        </div>
+
                         <button type="submit" class="btn btn-primary btn-lg w-100">
-                            <i class="bi bi-person-plus me-2"></i>Create Account
+                            <i class="bi bi-person-plus me-2"></i>Submit Registration
                         </button>
                     </form>
 
